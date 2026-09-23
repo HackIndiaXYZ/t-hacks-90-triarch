@@ -83,7 +83,7 @@ export function IdentityCard() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-sans">
-            TrustID issues W3C compliant DIDs backed by asymmetric key pairs. DID generation and wallet binding will activate in subsequent protocol steps.
+            Verifi issues W3C compliant DIDs backed by asymmetric key pairs. DID generation and wallet binding will activate in subsequent protocol steps.
           </p>
         </div>
       </div>

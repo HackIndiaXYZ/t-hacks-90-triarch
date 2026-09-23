@@ -1,16 +1,16 @@
-# TrustID
+# Verifi
 
 **Your Identity. Your Credentials. Your Control.**
 
-TrustID is a privacy-preserving digital identity and verifiable credential platform that lets users control and securely share their verified identity information using self-sovereign identity principles, verifiable credentials, and cryptographic proofs.
+Verifi is a privacy-preserving digital identity and verifiable credential platform that lets users control and securely share their verified identity information using self-sovereign identity principles, verifiable credentials, and cryptographic proofs.
 
-> **Important Project Rule**: TrustID strictly uses **real data and real working integrations**. It does not use mock data, fake users, simulated blockchain transactions, or placeholder verification results. When an integration is not yet connected, the architecture outlines the real connection requirements rather than simulating responses.
+> **Important Project Rule**: Verifi strictly uses **real data and real working integrations**. It does not use mock data, fake users, simulated blockchain transactions, or placeholder verification results. When an integration is not yet connected, the architecture outlines the real connection requirements rather than simulating responses.
 
 ---
 
-## 1. What TrustID Is
+## 1. What Verifi Is
 
-TrustID is a decentralized, privacy-focused identity platform designed to empower individuals with full sovereignty over their identity data. Users can hold cryptographically verifiable credentials (VCs), selectively disclose attributes, and verify claims on-chain and off-chain without exposing sensitive underlying data.
+Verifi is a decentralized, privacy-focused identity platform designed to empower individuals with full sovereignty over their identity data. Users can hold cryptographically verifiable credentials (VCs), selectively disclose attributes, and verify claims on-chain and off-chain without exposing sensitive underlying data.
 
 ---
 
@@ -19,6 +19,8 @@ TrustID is a decentralized, privacy-focused identity platform designed to empowe
 - **Framework**: Next.js (App Router)
 - **Language**: TypeScript (Strict Mode)
 - **Styling**: Tailwind CSS
+- **Authentication**: Clerk
+- **Backend Database**: Convex
 - **Linting & Formatting**: ESLint (`eslint-config-next`)
 - **Package Manager**: npm
 
@@ -28,10 +30,10 @@ TrustID is a decentralized, privacy-focused identity platform designed to empowe
 
 The codebase separates frontend application concerns from backend services, database handlers, and protocol specifications:
 
-- **Frontend (`/app`, `/components`)**: Responsive Next.js App Router user interface with reusable UI components and a dark cybersecurity/Web3 aesthetic.
+- **Frontend (`/app`, `/components`)**: Responsive Next.js App Router user interface with reusable UI components and Light/Dark mode support.
 - **Shared Utilities & Configuration (`/lib`, `/types`)**: Centralized type safety, safe environment variable access, and domain constants.
-- **Backend Architecture Placeholder (`/backend`)**: Dedicated area for identity issuance logic, signature verification, and API services.
-- **Convex Architecture Placeholder (`/convex`)**: Dedicated area for Convex reactive database schemas and server functions.
+- **Backend Services (`/backend`)**: Dedicated area for identity issuance logic, signature verification, and API services.
+- **Convex Database (`/convex`)**: Dedicated area for Convex reactive database schemas and server functions.
 - **Documentation (`/docs`)**: Technical specifications and protocol documentation.
 
 ---
@@ -39,21 +41,18 @@ The codebase separates frontend application concerns from backend services, data
 ## 4. Folder Structure
 
 ```
-trustid/
+verifi/
 │
 ├── app/
 │   ├── layout.tsx         # Root layout with fonts, navigation, and metadata
-│   ├── page.tsx           # TrustID landing page
+│   ├── page.tsx           # Verifi landing page
+│   ├── dashboard/         # Authenticated User Dashboard
 │   └── globals.css        # Global CSS and Tailwind styling
 │
 ├── components/
-│   ├── ui/
-│   │   └── button.tsx     # Reusable UI button component
-│   ├── layout/
-│   │   ├── navbar.tsx     # Application navigation header
-│   │   └── footer.tsx     # Application footer
-│   └── shared/
-│       └── card.tsx       # Reusable card container component
+│   ├── ui/                # Reusable UI components (button, theme toggle, etc.)
+│   ├── layout/            # Layout components (navbar, footer)
+│   └── dashboard/         # Dashboard panels and metrics
 │
 ├── lib/
 │   ├── config.ts          # Centralized configuration with runtime safety
@@ -63,16 +62,9 @@ trustid/
 ├── types/
 │   └── index.ts           # Core TypeScript types and interfaces
 │
-├── backend/
-│   └── README.md          # Architectural placeholder for backend services
-│
-├── convex/
-│   └── README.md          # Architectural placeholder for Convex schemas
-│
-├── docs/
-│   └── README.md          # Architectural placeholder for technical docs
-│
-├── public/                # Static assets
+├── convex/                # Convex schemas and backend functions
+├── backend/               # Backend protocol services
+├── docs/                  # Technical docs & specifications
 │
 ├── .env.example           # Environment variable template
 ├── .gitignore             # Git ignore rules (protects local credentials)
@@ -114,47 +106,4 @@ The application will be available at [http://localhost:3000](http://localhost:30
 cp .env.example .env.local
 ```
 
-2. Environment variables available for future integrations:
-
-| Variable | Description | Runtime Exposure |
-|---|---|---|
-| `NEXT_PUBLIC_APP_URL` | Public base URL of the application | Public / Browser |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk Authentication publishable key | Public / Browser |
-| `CLERK_SECRET_KEY` | Clerk Authentication secret key | Server Only (Private) |
-| `NEXT_PUBLIC_CONVEX_URL` | Convex deployment URL | Public / Browser |
-| `NEXT_PUBLIC_BLOCKCHAIN_NETWORK` | Blockchain network name / Chain ID | Public / Browser |
-| `NEXT_PUBLIC_CONTRACT_ADDRESS` | Deployed identity smart contract address | Public / Browser |
-| `BLOCKCHAIN_RPC_URL` | JSON-RPC provider endpoint | Server Only (Private) |
-| `BLOCKCHAIN_PRIVATE_KEY` | Deployer / relayer private key | Server Only (Private) |
-| `TRUSTID_API_URL` | External TrustID verification service URL | Server Only (Private) |
-| `TRUSTID_API_KEY` | External TrustID API authorization key | Server Only (Private) |
-
-> **Note**: For Step 1, no real environment variable values are required to run the development server or build the application.
-
----
-
-## 8. What is Implemented in Step 1
-
-- Next.js project foundation with TypeScript, App Router, and Tailwind CSS.
-- Production-ready folder structure separating frontend, UI components, utilities, and backend placeholders.
-- Strict TypeScript configurations with zero type errors.
-- Clean responsive landing page with TrustID branding, tagline, description, and "Get Started" action button.
-- Reusable UI component system (`Button`, `Navbar`, `Footer`, `Card`).
-- Centralized configuration with runtime safety rules prohibiting browser exposure of private keys or secrets.
-- Environment variable specifications in `.env.example` and gitignore rules for `.env.local`.
-
----
-
-## 9. What is Intentionally NOT Implemented Yet
-
-The following systems are intentionally omitted from Step 1 and will be introduced in their respective subsequent steps using **real integrations**:
-
-- Clerk user authentication & session management.
-- Convex database schemas and server functions.
-- W3C Decentralized Identifiers (DID) resolution.
-- Verifiable Credential issuance & cryptographic verification.
-- Solidity smart contracts, Hardhat, ethers.js, and blockchain transactions.
-- Zero-Knowledge Proof (ZKP) generation and verification circuits.
-- WebAuthn / Passkeys authentication.
-- QR code generation and mobile credential wallet scanning.
-- External TrustID verification API connectivity.
+2. Configure Clerk and Convex credentials in `.env.local`.

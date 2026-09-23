@@ -1,5 +1,5 @@
 /**
- * Utility functions for TrustID
+ * Utility functions for Verifi
  */
 
 /**

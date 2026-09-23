@@ -120,7 +120,7 @@ export default async function Home() {
 
         {/* Protocol Note */}
         <p className="mt-12 text-xs font-mono text-slate-500 dark:text-slate-400">
-          TrustID Architecture: Real authentication &amp; Convex backend synchronized.
+          Verifi Architecture: Real authentication &amp; Convex backend synchronized.
         </p>
       </div>
     </div>

@@ -43,7 +43,7 @@ export async function Navbar() {
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-600 dark:text-slate-400">
             <span className="w-2 h-2 rounded-full bg-sky-500 dark:bg-cyan-400 animate-pulse" />
-            <span>TrustID Live</span>
+            <span>Verifi Live</span>
           </div>
 
           {/* Theme Toggle Button */}

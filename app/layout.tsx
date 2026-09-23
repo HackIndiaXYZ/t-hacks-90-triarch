@@ -46,7 +46,7 @@ export default function RootLayout({
             dangerouslySetInnerHTML={{
               __html: `
                 try {
-                  const stored = localStorage.getItem('trustid-theme');
+                  const stored = localStorage.getItem('verifi-theme') || localStorage.getItem('trustid-theme');
                   if (stored === 'dark') {
                     document.documentElement.classList.add('dark');
                   } else {

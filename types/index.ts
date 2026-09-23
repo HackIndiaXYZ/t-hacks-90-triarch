@@ -1,5 +1,5 @@
 /**
- * Core Type Definitions for TrustID
+ * Core Type Definitions for Verifi
  */
 
 export interface NavItem {

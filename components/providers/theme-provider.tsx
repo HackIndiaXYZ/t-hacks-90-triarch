@@ -24,7 +24,7 @@ function subscribe(callback: () => void) {
 
 function getSnapshot(): Theme {
   if (typeof window === "undefined") return "light";
-  const stored = localStorage.getItem("trustid-theme");
+  const stored = localStorage.getItem("verifi-theme") || localStorage.getItem("trustid-theme");
   return stored === "dark" ? "dark" : "light";
 }
 
@@ -37,7 +37,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = (newTheme: Theme) => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("trustid-theme", newTheme);
+      localStorage.setItem("verifi-theme", newTheme);
       const root = document.documentElement;
       if (newTheme === "dark") {
         root.classList.add("dark");
