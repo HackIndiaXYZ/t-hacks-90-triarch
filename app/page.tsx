@@ -1,8 +1,12 @@
 import React from "react";
+import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
 import { Button } from "@/components/ui/button";
 import { APP_NAME, APP_TAGLINE, APP_DESCRIPTION } from "@/lib/constants";
 
-export default function Home() {
+export default async function Home() {
+  const { userId } = await auth();
+
   return (
     <div className="relative flex-1 flex flex-col justify-center items-center overflow-hidden bg-cyber-grid py-20 px-4 sm:px-6 lg:px-8">
       {/* Ambient background glow */}
@@ -28,7 +32,7 @@ export default function Home() {
           </svg>
           <span className="font-mono">{APP_NAME} Protocol</span>
           <span className="text-slate-500">&middot;</span>
-          <span className="text-slate-400">Production Architecture</span>
+          <span className="text-slate-400">Step 4: Real Clerk Authentication</span>
         </div>
 
         {/* Brand Name / Title */}
@@ -46,20 +50,34 @@ export default function Home() {
 
         {/* Action Button */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md">
-          <Button
-            size="lg"
-            className="w-full sm:w-auto min-w-[200px]"
-            title="Authentication will be connected in subsequent phase"
-          >
-            Get Started
-          </Button>
+          {!userId ? (
+            <>
+              <Link href="/sign-up" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto min-w-[200px]">
+                  Get Started
+                </Button>
+              </Link>
+              <Link href="/sign-in" className="w-full sm:w-auto">
+                <Button variant="secondary" size="lg" className="w-full sm:w-auto min-w-[140px]">
+                  Sign In
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <Link href="/dashboard" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto min-w-[200px]">
+                Go to Dashboard &rarr;
+              </Button>
+            </Link>
+          )}
         </div>
 
-        {/* Note on Step 1 Foundation */}
-        <p className="mt-4 text-xs font-mono text-slate-500">
-          Step 1: Project Foundation initialized. Real auth and credential integrations will connect in subsequent steps.
+        {/* Note on Real Authentication */}
+        <p className="mt-6 text-xs font-mono text-slate-500">
+          Powered by real Clerk authentication. No mock users or fake sessions.
         </p>
       </div>
     </div>
   );
 }
+
