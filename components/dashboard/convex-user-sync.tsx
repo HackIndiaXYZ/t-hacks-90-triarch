@@ -48,13 +48,11 @@ export function ConvexUserSync() {
     : null;
 
   return (
-    <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-md relative overflow-hidden group hover:border-emerald-500/40 transition-all shadow-xl shadow-cyan-950/20">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-
+    <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200/90 dark:border-slate-800 backdrop-blur-md relative overflow-hidden group hover:border-emerald-500/40 transition-all shadow-sm dark:shadow-xl dark:shadow-cyan-950/20">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-sm">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
@@ -65,14 +63,11 @@ export function ConvexUserSync() {
             </svg>
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
               Convex Database User Record
-              <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                Step 7
-              </span>
             </h2>
-            <p className="text-xs text-slate-400">
-              Real authenticated Clerk identity stored in Convex <code className="text-emerald-400">users</code> table with verified role
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Real authenticated Clerk identity stored in Convex <code className="text-emerald-600 dark:text-emerald-400">users</code> table with verified role
             </p>
           </div>
         </div>
@@ -80,22 +75,22 @@ export function ConvexUserSync() {
         {/* Sync Status Badge */}
         <div>
           {isAuthLoading || syncStatus === "syncing" ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-ping" />
               Syncing User...
             </span>
           ) : userRecord ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
               Convex Synced ({userRecord.role})
             </span>
           ) : syncStatus === "error" ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400" />
               Sync Error
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-slate-800 text-slate-400 border border-slate-700">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
               Pending
             </span>
           )}
@@ -104,58 +99,58 @@ export function ConvexUserSync() {
 
       {/* Content Body */}
       {isAuthLoading ? (
-        <div className="py-6 flex flex-col items-center justify-center gap-2 text-xs text-slate-400">
-          <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin" />
+        <div className="py-6 flex flex-col items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
           <span>Authenticating and reading user record...</span>
         </div>
       ) : syncError ? (
-        <div className="p-4 rounded-lg bg-rose-950/40 border border-rose-800/60 text-xs text-rose-300">
+        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300">
           <p className="font-semibold mb-1">Sync failed:</p>
           <p className="font-mono">{syncError}</p>
         </div>
       ) : userRecord ? (
         <div className="space-y-3 mt-4 text-xs font-mono">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800/80">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
               <span className="text-slate-500 text-[11px] block mb-1">Convex Record ID (_id):</span>
-              <span className="text-emerald-300 break-all">{userRecord._id}</span>
+              <span className="text-emerald-700 dark:text-emerald-300 break-all">{userRecord._id}</span>
             </div>
-            <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800/80">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
               <span className="text-slate-500 text-[11px] block mb-1">Indexed clerkId:</span>
-              <span className="text-cyan-300 break-all">{userRecord.clerkId}</span>
+              <span className="text-sky-700 dark:text-cyan-300 break-all">{userRecord.clerkId}</span>
             </div>
-            <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800/80">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
               <span className="text-slate-500 text-[11px] block mb-1">Convex Stored Role:</span>
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-sky-50 dark:bg-cyan-500/10 text-sky-700 dark:text-cyan-400 border border-sky-200 dark:border-cyan-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 dark:bg-cyan-400" />
                 {userRecord.role}
               </span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800/80">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
               <span className="text-slate-500 text-[11px] block mb-1">Stored Email:</span>
-              <span className="text-slate-200">{userRecord.email || "None"}</span>
+              <span className="text-slate-800 dark:text-slate-200">{userRecord.email || "None"}</span>
             </div>
-            <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800/80">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
               <span className="text-slate-500 text-[11px] block mb-1">Stored Name:</span>
-              <span className="text-slate-200">{userRecord.name || "None"}</span>
+              <span className="text-slate-800 dark:text-slate-200">{userRecord.name || "None"}</span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800/80">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
               <span className="text-slate-500 text-[11px] block mb-1">Created At:</span>
-              <span className="text-slate-300">{createdAtFormatted}</span>
+              <span className="text-slate-700 dark:text-slate-300">{createdAtFormatted}</span>
             </div>
-            <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800/80">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
               <span className="text-slate-500 text-[11px] block mb-1">Last Updated At:</span>
-              <span className="text-slate-300">{updatedAtFormatted}</span>
+              <span className="text-slate-700 dark:text-slate-300">{updatedAtFormatted}</span>
             </div>
           </div>
 
-          <p className="text-[11px] text-emerald-400/90 font-sans mt-2 flex items-center gap-1.5">
+          <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-sans mt-2 flex items-center gap-1.5">
             <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
               <path
                 fillRule="evenodd"
@@ -167,7 +162,7 @@ export function ConvexUserSync() {
           </p>
         </div>
       ) : (
-        <div className="p-4 rounded-lg bg-slate-950/60 border border-slate-800 text-xs text-slate-400">
+        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
           Syncing user record to Convex...
         </div>
       )}

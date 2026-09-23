@@ -68,7 +68,7 @@ export function DashboardNav() {
   ];
 
   return (
-    <nav className="w-full bg-slate-950/60 border border-slate-800/80 rounded-2xl p-2 backdrop-blur-xl shadow-lg shadow-cyan-950/10">
+    <nav className="w-full bg-white dark:bg-slate-950/60 border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-2 backdrop-blur-xl shadow-sm dark:shadow-lg dark:shadow-cyan-950/10 transition-colors duration-200">
       <div className="flex flex-wrap items-center justify-between gap-2">
         {/* Navigation Tabs */}
         <div className="flex items-center gap-1 overflow-x-auto py-1 scrollbar-none">
@@ -80,11 +80,11 @@ export function DashboardNav() {
                 href={item.href}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 shrink-0 ${
                   isActive
-                    ? "bg-gradient-to-r from-cyan-500/20 to-blue-600/20 text-cyan-300 border border-cyan-500/30 shadow-sm shadow-cyan-500/10"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/80"
+                    ? "bg-sky-50 text-sky-700 border border-sky-200 shadow-sm dark:bg-cyan-500/10 dark:text-cyan-300 dark:border-cyan-500/30"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-900/80"
                 }`}
               >
-                <span className={isActive ? "text-cyan-400" : "text-slate-500"}>
+                <span className={isActive ? "text-sky-600 dark:text-cyan-400" : "text-slate-400 dark:text-slate-500"}>
                   {item.icon}
                 </span>
                 <span>{item.label}</span>
@@ -94,12 +94,12 @@ export function DashboardNav() {
         </div>
 
         {/* User Context & Sign Out */}
-        <div className="flex items-center gap-3 pl-2 border-l border-slate-800/80 shrink-0">
+        <div className="flex items-center gap-3 pl-2 border-l border-slate-200 dark:border-slate-800/80 shrink-0">
           <div className="hidden sm:flex flex-col text-right">
-            <span className="text-[11px] font-medium text-slate-300 truncate max-w-[140px]">
+            <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300 truncate max-w-[140px]">
               {clerkUser?.fullName || clerkUser?.primaryEmailAddress?.emailAddress || "User"}
             </span>
-            <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider">
+            <span className="text-[10px] font-mono text-sky-600 dark:text-cyan-400 uppercase tracking-wider font-semibold">
               {role}
             </span>
           </div>
@@ -107,7 +107,7 @@ export function DashboardNav() {
           <SignOutButton redirectUrl="/">
             <button
               title="Sign Out"
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition-all duration-200 flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/30 transition-all duration-200 flex items-center gap-1.5"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
