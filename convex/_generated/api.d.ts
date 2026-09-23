@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as roleRequests from "../roleRequests.js";
 import type * as users from "../users.js";
 
 import type {
@@ -21,6 +22,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   "lib/auth": typeof lib_auth;
+  roleRequests: typeof roleRequests;
   users: typeof users;
 }>;
 

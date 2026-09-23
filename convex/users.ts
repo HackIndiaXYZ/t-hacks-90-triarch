@@ -174,3 +174,22 @@ export const verifyRoleAuthorization = query({
     };
   },
 });
+
+/**
+ * completeUserOnboarding
+ *
+ * Marks onboarding as completed for the authenticated user while strictly maintaining role = "user".
+ * Enforces ctx.auth authentication.
+ */
+export const completeUserOnboarding = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx);
+    await ctx.db.patch(user._id, {
+      onboardingCompleted: true,
+      updatedAt: Date.now(),
+    });
+    return await ctx.db.get(user._id);
+  },
+});
+

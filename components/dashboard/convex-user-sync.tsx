@@ -40,13 +40,6 @@ export function ConvexUserSync() {
       })
     : null;
 
-  const updatedAtFormatted = userRecord?.updatedAt
-    ? new Date(userRecord.updatedAt).toLocaleString(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      })
-    : null;
-
   return (
     <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200/90 dark:border-slate-800 backdrop-blur-md relative overflow-hidden group hover:border-emerald-500/40 transition-all shadow-sm dark:shadow-xl dark:shadow-cyan-950/20">
       {/* Header */}
@@ -145,10 +138,35 @@ export function ConvexUserSync() {
               <span className="text-slate-700 dark:text-slate-300">{createdAtFormatted}</span>
             </div>
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
-              <span className="text-slate-500 text-[11px] block mb-1">Last Updated At:</span>
-              <span className="text-slate-700 dark:text-slate-300">{updatedAtFormatted}</span>
+              <span className="text-slate-500 text-[11px] block mb-1">Onboarding Status:</span>
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold ${
+                userRecord.onboardingCompleted
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20"
+                  : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20"
+              }`}>
+                {userRecord.onboardingCompleted ? "Completed" : "Action Recommended"}
+              </span>
             </div>
           </div>
+
+          {!userRecord.onboardingCompleted && (
+            <div className="p-3 rounded-xl bg-sky-50/80 dark:bg-slate-950/90 border border-sky-200 dark:border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div>
+                <span className="font-semibold text-slate-900 dark:text-slate-100 block">
+                  Role Onboarding Initialization
+                </span>
+                <span className="text-[11px] text-slate-600 dark:text-slate-400 font-sans">
+                  Select your profile type (Individual User, Issuer, or Verifier) to configure your decentralized identity preferences.
+                </span>
+              </div>
+              <a
+                href="/onboarding"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 dark:bg-cyan-600 dark:hover:bg-cyan-500 transition-all shrink-0 self-start sm:self-auto"
+              >
+                Complete Onboarding &rarr;
+              </a>
+            </div>
+          )}
 
           <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-sans mt-2 flex items-center gap-1.5">
             <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
