@@ -42,7 +42,7 @@ export async function Navbar() {
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-mono text-slate-400">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            <span>Step 4: Real Auth</span>
+            <span>Step 8: Real TrustID UI</span>
           </div>
 
           {!userId ? (
