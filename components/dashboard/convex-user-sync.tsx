@@ -2,10 +2,12 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 
 export function ConvexUserSync() {
   const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
+  const { user: clerkUser, isLoaded: isClerkLoaded } = useUser();
   const syncCurrentUser = useMutation(api.users.syncCurrentUser);
   const userRecord = useQuery(
     api.users.getCurrentUser,
@@ -14,24 +16,38 @@ export function ConvexUserSync() {
 
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
   const [syncError, setSyncError] = useState<string | null>(null);
-  const hasSyncedRef = useRef(false);
+  const lastSyncedKeyRef = useRef<string>("");
 
   useEffect(() => {
-    if (isAuthenticated && !hasSyncedRef.current) {
-      hasSyncedRef.current = true;
-      setSyncStatus("syncing");
+    if (isAuthenticated && isClerkLoaded && clerkUser) {
+      const email = clerkUser.primaryEmailAddress?.emailAddress || clerkUser.emailAddresses?.[0]?.emailAddress || "";
+      const username = clerkUser.username || "";
+      const name = clerkUser.fullName || [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || "";
+      const imageUrl = clerkUser.imageUrl || "";
 
-      syncCurrentUser()
-        .then(() => {
-          setSyncStatus("synced");
+      const syncKey = `${clerkUser.id}:${username}:${email}:${name}:${imageUrl}`;
+
+      if (lastSyncedKeyRef.current !== syncKey) {
+        lastSyncedKeyRef.current = syncKey;
+        setSyncStatus("syncing");
+
+        syncCurrentUser({
+          username: username || undefined,
+          email: email || undefined,
+          name: name || undefined,
+          imageUrl: imageUrl || undefined,
         })
-        .catch((err) => {
-          console.error("Failed to sync user to Convex:", err);
-          setSyncStatus("error");
-          setSyncError(err instanceof Error ? err.message : "Sync failed");
-        });
+          .then(() => {
+            setSyncStatus("synced");
+          })
+          .catch((err) => {
+            console.error("Failed to sync user to Convex:", err);
+            setSyncStatus("error");
+            setSyncError(err instanceof Error ? err.message : "Sync failed");
+          });
+      }
     }
-  }, [isAuthenticated, syncCurrentUser]);
+  }, [isAuthenticated, isClerkLoaded, clerkUser, syncCurrentUser]);
 
   const createdAtFormatted = userRecord?.createdAt
     ? new Date(userRecord.createdAt).toLocaleString(undefined, {
@@ -39,6 +55,11 @@ export function ConvexUserSync() {
         timeStyle: "short",
       })
     : null;
+
+  const displayUsername = userRecord?.username || clerkUser?.username || "Not configured";
+  const displayEmail = userRecord?.email || clerkUser?.primaryEmailAddress?.emailAddress || clerkUser?.emailAddresses?.[0]?.emailAddress || "Not available";
+  const displayName = userRecord?.name || clerkUser?.fullName || [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(" ") || displayUsername;
+  const displayImage = userRecord?.imageUrl || clerkUser?.imageUrl;
 
   return (
     <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200/90 dark:border-slate-800 backdrop-blur-md relative overflow-hidden group hover:border-emerald-500/40 transition-all shadow-sm dark:shadow-xl dark:shadow-cyan-950/20">
@@ -60,7 +81,7 @@ export function ConvexUserSync() {
               Convex Database User Record
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Real authenticated Clerk identity stored in Convex <code className="text-emerald-600 dark:text-emerald-400">users</code> table with verified role
+              Real authenticated Clerk identity synchronized to Convex <code className="text-emerald-600 dark:text-emerald-400">users</code> table with verified role
             </p>
           </div>
         </div>
@@ -121,14 +142,29 @@ export function ConvexUserSync() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
-              <span className="text-slate-500 text-[11px] block mb-1">Stored Email:</span>
-              <span className="text-slate-800 dark:text-slate-200">{userRecord.email || "None"}</span>
+              <span className="text-slate-500 text-[11px] block mb-1">Clerk Username:</span>
+              <span className="text-slate-900 dark:text-slate-100 font-bold">
+                {displayUsername.startsWith("@") ? displayUsername : `@${displayUsername}`}
+              </span>
             </div>
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
-              <span className="text-slate-500 text-[11px] block mb-1">Stored Name:</span>
-              <span className="text-slate-800 dark:text-slate-200">{userRecord.name || "None"}</span>
+              <span className="text-slate-500 text-[11px] block mb-1">Stored Email:</span>
+              <span className="text-slate-800 dark:text-slate-200 break-all">{displayEmail}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
+              <div>
+                <span className="text-slate-500 text-[11px] block mb-1">Stored Name:</span>
+                <span className="text-slate-800 dark:text-slate-200 font-sans font-medium">{displayName}</span>
+              </div>
+              {displayImage && (
+                <img
+                  src={displayImage}
+                  alt={displayName}
+                  className="w-8 h-8 rounded-full border border-slate-300 dark:border-slate-700 shrink-0 object-cover"
+                />
+              )}
             </div>
           </div>
 
@@ -140,16 +176,26 @@ export function ConvexUserSync() {
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
               <span className="text-slate-500 text-[11px] block mb-1">Onboarding Status:</span>
               <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold ${
-                userRecord.onboardingCompleted
+                userRecord.role === "admin"
+                  ? "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20"
+                  : userRecord.role === "issuer" || userRecord.role === "verifier" || userRecord.onboardingCompleted
                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20"
                   : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20"
               }`}>
-                {userRecord.onboardingCompleted ? "Completed" : "Action Recommended"}
+                {userRecord.role === "admin"
+                  ? "Fully Initialized (Admin)"
+                  : userRecord.role === "issuer"
+                  ? "Authorized (Issuer)"
+                  : userRecord.role === "verifier"
+                  ? "Authorized (Verifier)"
+                  : userRecord.onboardingCompleted
+                  ? "Completed"
+                  : "Action Recommended"}
               </span>
             </div>
           </div>
 
-          {!userRecord.onboardingCompleted && (
+          {userRecord.role === "user" && !userRecord.onboardingCompleted && (
             <div className="p-3 rounded-xl bg-sky-50/80 dark:bg-slate-950/90 border border-sky-200 dark:border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div>
                 <span className="font-semibold text-slate-900 dark:text-slate-100 block">
@@ -176,7 +222,7 @@ export function ConvexUserSync() {
                 clipRule="evenodd"
               />
             </svg>
-            Duplicate prevention verified. Idempotent sync ensures 1 real user record per Clerk account.
+            Clerk profile sync active. Changes in Clerk username, email, or name automatically reflect in Convex.
           </p>
         </div>
       ) : (

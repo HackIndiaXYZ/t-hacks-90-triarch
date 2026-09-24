@@ -11,16 +11,36 @@ type SelectedRole = "user" | "issuer" | "verifier";
 
 export function RoleOnboardingFlow() {
   const router = useRouter();
-  const { user: clerkUser } = useUser();
-  const { isAuthenticated } = useConvexAuth();
+  const { user: clerkUser, isLoaded: isClerkLoaded } = useUser();
+  const { isAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
+
+  const isAuthReady = isClerkLoaded && !isConvexAuthLoading && isAuthenticated;
 
   const latestRequest = useQuery(
     api.roleRequests.getLatestRoleRequest,
     isAuthenticated ? {} : "skip"
   );
+  const currentUser = useQuery(
+    api.users.getCurrentUser,
+    isAuthenticated ? {} : "skip"
+  );
 
   const completeUserOnboarding = useMutation(api.users.completeUserOnboarding);
   const submitRoleRequest = useMutation(api.roleRequests.submitRoleRequest);
+  const syncCurrentUser = useMutation(api.users.syncCurrentUser);
+
+  // Auto-redirect initialized and privileged roles away from onboarding
+  React.useEffect(() => {
+    if (currentUser) {
+      if (currentUser.role === "admin") {
+        router.replace("/admin");
+      } else if (currentUser.role === "issuer" || currentUser.role === "verifier") {
+        router.replace("/dashboard");
+      } else if (currentUser.onboardingCompleted && latestRequest?.status !== "pending") {
+        router.replace("/dashboard");
+      }
+    }
+  }, [currentUser, latestRequest, router]);
 
   const [selectedRole, setSelectedRole] = useState<SelectedRole | null>(null);
   const [step, setStep] = useState<"select" | "form" | "submitted">("select");
@@ -37,9 +57,20 @@ export function RoleOnboardingFlow() {
   const [useCase, setUseCase] = useState("");
 
   const handleSelectUser = async () => {
+    if (!isAuthReady) {
+      setErrorMsg("Authentication session is initializing. Please wait a moment and try again.");
+      return;
+    }
     setIsSubmitting(true);
     setErrorMsg(null);
     try {
+      // Ensure user record is synced with Clerk profile data first then marked completed
+      await syncCurrentUser({
+        username: clerkUser?.username || undefined,
+        email: clerkUser?.primaryEmailAddress?.emailAddress || undefined,
+        name: clerkUser?.fullName || undefined,
+        imageUrl: clerkUser?.imageUrl || undefined,
+      });
       await completeUserOnboarding();
       router.push("/dashboard");
     } catch (err: unknown) {
@@ -74,10 +105,21 @@ export function RoleOnboardingFlow() {
       return;
     }
 
+    if (!isAuthReady) {
+      setErrorMsg("Authentication session is initializing. Please wait a moment and try again.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMsg(null);
 
     try {
+      await syncCurrentUser({
+        username: clerkUser?.username || undefined,
+        email: clerkUser?.primaryEmailAddress?.emailAddress || undefined,
+        name: clerkUser?.fullName || undefined,
+        imageUrl: clerkUser?.imageUrl || undefined,
+      });
       await submitRoleRequest({
         requestedRole: selectedRole,
         organizationName: orgName.trim(),
@@ -93,6 +135,20 @@ export function RoleOnboardingFlow() {
       setIsSubmitting(false);
     }
   };
+
+  if (currentUser?.role === "admin" || currentUser?.role === "issuer" || currentUser?.role === "verifier") {
+    return (
+      <div className="w-full max-w-md mx-auto py-16 px-4 text-center space-y-4">
+        <div className="w-10 h-10 border-2 border-indigo-500/30 border-t-indigo-600 rounded-full animate-spin mx-auto" />
+        <h3 className="text-base font-bold text-slate-900 dark:text-white">
+          {currentUser.role === "admin" ? "Redirecting to Governance Console..." : "Redirecting to Dashboard..."}
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+          Your account is already initialized with role: &apos;{currentUser.role}&apos;.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto py-6 px-4">
@@ -186,10 +242,14 @@ export function RoleOnboardingFlow() {
             <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
               <Button
                 onClick={handleSelectUser}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !isAuthReady}
                 className="w-full justify-center"
               >
-                {isSubmitting ? "Setting Up..." : "Continue as User"}
+                {isSubmitting
+                  ? "Setting Up..."
+                  : !isAuthReady
+                  ? "Initializing Session..."
+                  : "Continue as User"}
               </Button>
             </div>
           </div>

@@ -235,23 +235,61 @@ export function RoleAuthorizationCard() {
         </div>
       </div>
 
-      {/* Role Request CTA / Onboarding Link */}
+      {/* Role Request CTA / Onboarding Link / Admin Console Link */}
       <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
-            Role Onboarding &amp; Upgrade
-          </span>
-          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-sans">
-            Apply for Issuer or Verifier authority status or review onboarding options.
-          </span>
-        </div>
+        {userRole === "admin" ? (
+          <>
+            <div>
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
+                Administrative Governance Active
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-sans">
+                You have full governance privileges. Manage role applications and oversee network identities.
+              </span>
+            </div>
 
-        <Link
-          href="/onboarding"
-          className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-sky-700 hover:text-sky-800 dark:text-cyan-300 dark:hover:text-cyan-200 bg-sky-50 hover:bg-sky-100 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/20 border border-sky-200 dark:border-cyan-500/30 transition-all self-start sm:self-auto shrink-0 shadow-xs"
-        >
-          {latestRequest?.status === "pending" ? "Update Role Request &rarr;" : "Onboard as Issuer / Verifier &rarr;"}
-        </Link>
+            <Link
+              href="/admin"
+              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all self-start sm:self-auto shrink-0 flex items-center gap-1.5"
+            >
+              <span>Governance Console</span>
+              <span>&rarr;</span>
+            </Link>
+          </>
+        ) : userRole === "issuer" || userRole === "verifier" ? (
+          <>
+            <div>
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
+                {userRole === "issuer" ? "Authorized Credential Issuer" : "Authorized Relying Party Verifier"}
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-sans">
+                Your authority credentials are fully verified and active on the Verifi network.
+              </span>
+            </div>
+
+            <span className="px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30">
+              Authority Active
+            </span>
+          </>
+        ) : (
+          <>
+            <div>
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
+                Role Onboarding &amp; Upgrade
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-sans">
+                Apply for Issuer or Verifier authority status or configure your decentralized identity preferences.
+              </span>
+            </div>
+
+            <Link
+              href="/onboarding"
+              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-sky-700 hover:text-sky-800 dark:text-cyan-300 dark:hover:text-cyan-200 bg-sky-50 hover:bg-sky-100 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/20 border border-sky-200 dark:border-cyan-500/30 transition-all self-start sm:self-auto shrink-0 shadow-xs"
+            >
+              {latestRequest?.status === "pending" ? "Update Role Request &rarr;" : "Onboard as Issuer / Verifier &rarr;"}
+            </Link>
+          </>
+        )}
       </div>
 
       {/* Backend Authorization Security Test */}

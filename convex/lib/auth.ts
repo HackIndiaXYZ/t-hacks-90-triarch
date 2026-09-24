@@ -1,7 +1,20 @@
 import { QueryCtx, MutationCtx } from "../_generated/server";
 import { Doc } from "../_generated/dataModel";
 
-export type Role = "user" | "issuer" | "verifier";
+export type Role = "user" | "issuer" | "verifier" | "admin";
+
+export function isInitialAdmin(email?: string, clerkId?: string): boolean {
+  const adminEmail = process.env.INITIAL_ADMIN_EMAIL;
+  const adminClerkId = process.env.INITIAL_ADMIN_CLERK_ID;
+
+  if (adminEmail && email && email.trim().toLowerCase() === adminEmail.trim().toLowerCase()) {
+    return true;
+  }
+  if (adminClerkId && clerkId && clerkId.trim() === adminClerkId.trim()) {
+    return true;
+  }
+  return false;
+}
 
 /**
  * getAuthenticatedUser
@@ -17,10 +30,62 @@ export async function getAuthenticatedUser(
     return null;
   }
 
-  const user = await ctx.db
+  let user = await ctx.db
     .query("users")
     .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
     .unique();
+
+  const email = identity.email ?? undefined;
+  const name = identity.name ?? undefined;
+  const username = identity.nickname ?? undefined;
+  const imageUrl = identity.pictureUrl ?? undefined;
+  const now = Date.now();
+  const shouldBeAdmin = isInitialAdmin(email, identity.subject);
+
+  // If in a mutation context and user record does not exist yet, auto-provision
+  // with verified Clerk identity
+  if (!user && "insert" in ctx.db) {
+    const initialRole: Role = shouldBeAdmin ? "admin" : "user";
+    const userId = await (ctx as MutationCtx).db.insert("users", {
+      clerkId: identity.subject,
+      username,
+      email,
+      name,
+      imageUrl,
+      role: initialRole,
+      onboardingCompleted: shouldBeAdmin ? true : false,
+      createdAt: now,
+      updatedAt: now,
+    });
+    user = await ctx.db.get(userId);
+  } else if (user && "patch" in ctx.db) {
+    // If user exists and profile data or initial admin status changed, auto-sync during mutation
+    const targetRole = shouldBeAdmin && user.role !== "admin" ? "admin" : user.role;
+    const shouldMarkOnboarded =
+      (targetRole === "admin" || targetRole === "issuer" || targetRole === "verifier") &&
+      !user.onboardingCompleted;
+
+    const needsUpdate =
+      (email !== undefined && user.email !== email) ||
+      (name !== undefined && user.name !== name) ||
+      (username !== undefined && user.username !== username) ||
+      (imageUrl !== undefined && user.imageUrl !== imageUrl) ||
+      user.role !== targetRole ||
+      shouldMarkOnboarded;
+
+    if (needsUpdate) {
+      await (ctx as MutationCtx).db.patch(user._id, {
+        email: email ?? user.email,
+        name: name ?? user.name,
+        username: username ?? user.username,
+        imageUrl: imageUrl ?? user.imageUrl,
+        role: targetRole,
+        onboardingCompleted: user.onboardingCompleted || shouldMarkOnboarded || false,
+        updatedAt: now,
+      });
+      user = await ctx.db.get(user._id);
+    }
+  }
 
   if (!user) {
     return null;
@@ -89,6 +154,21 @@ export async function requireRole(
     throw new Error(
       `Forbidden: Action requires one of [${allowedRoles.join(", ")}]. Current role: '${user.role}'.`
     );
+  }
+  return user;
+}
+
+/**
+ * requireAdmin
+ *
+ * Enforces that the caller has the 'admin' role. Throws a forbidden error otherwise.
+ */
+export async function requireAdmin(
+  ctx: QueryCtx | MutationCtx
+): Promise<Doc<"users">> {
+  const user = await requireUser(ctx);
+  if (user.role !== "admin") {
+    throw new Error(`Forbidden: Action requires 'admin' role. Current role: '${user.role}'.`);
   }
   return user;
 }

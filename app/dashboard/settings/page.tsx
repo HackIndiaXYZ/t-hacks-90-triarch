@@ -58,6 +58,12 @@ export default async function SettingsPage() {
           </h3>
 
           <dl className="space-y-3 text-xs font-mono">
+            {user.username && (
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
+                <dt className="text-slate-500 dark:text-slate-400 text-[11px] mb-0.5">Clerk Username</dt>
+                <dd className="text-slate-900 dark:text-slate-200 font-bold">@{user.username}</dd>
+              </div>
+            )}
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
               <dt className="text-slate-500 dark:text-slate-400 text-[11px] mb-0.5">Display Name</dt>
               <dd className="text-slate-900 dark:text-slate-200 font-sans font-medium">{displayName}</dd>
@@ -84,9 +90,9 @@ export default async function SettingsPage() {
 
           <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
             <span className="text-xs text-slate-500 dark:text-slate-400">Terminate active session:</span>
-            <SignOutButton redirectUrl="/">
+            <SignOutButton sessionId={user.id} redirectUrl="/">
               <button className="px-4 py-2 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/30 transition-all cursor-pointer">
-                Sign Out
+                Sign Out Current Session
               </button>
             </SignOutButton>
           </div>

@@ -4,7 +4,8 @@ import { v } from "convex/values";
 export const UserRole = v.union(
   v.literal("user"),
   v.literal("issuer"),
-  v.literal("verifier")
+  v.literal("verifier"),
+  v.literal("admin")
 );
 
 export const RoleRequestStatus = v.union(
@@ -21,8 +22,10 @@ export const RequestedRole = v.union(
 export default defineSchema({
   users: defineTable({
     clerkId: v.string(),
+    username: v.optional(v.string()),
     email: v.optional(v.string()),
     name: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
     role: UserRole,
     onboardingCompleted: v.optional(v.boolean()),
     createdAt: v.number(),
@@ -40,6 +43,8 @@ export default defineSchema({
     useCaseDescription: v.string(),
     status: RoleRequestStatus,
     reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.string()),
+    adminNotes: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

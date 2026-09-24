@@ -3,6 +3,8 @@ import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { UserButton } from "@clerk/nextjs";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NavbarAdminLink } from "./navbar-admin-link";
+import { AccountSwitcher } from "@/components/auth/account-switcher";
 import { APP_NAME } from "@/lib/constants";
 
 export async function Navbar() {
@@ -65,10 +67,12 @@ export async function Navbar() {
               </Link>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <AccountSwitcher />
+              <NavbarAdminLink />
               <Link
                 href="/dashboard"
-                className="text-xs font-semibold text-slate-700 hover:text-sky-600 dark:text-slate-300 dark:hover:text-cyan-400 px-3 py-1.5 transition-colors"
+                className="text-xs font-semibold text-slate-700 hover:text-sky-600 dark:text-slate-300 dark:hover:text-cyan-400 px-2 sm:px-3 py-1.5 transition-colors"
               >
                 Dashboard
               </Link>

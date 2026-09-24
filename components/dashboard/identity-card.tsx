@@ -67,8 +67,12 @@ export function IdentityCard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800/80">
             <span className="text-slate-500 text-[11px] block mb-1">Subject Account</span>
-            <span className="text-slate-800 dark:text-slate-300 break-all font-sans font-medium">
-              {isLoading ? "Loading..." : user?.email || user?.clerkId || "Authenticated Session"}
+            <span className="text-slate-800 dark:text-slate-200 break-all font-sans font-medium">
+              {isLoading
+                ? "Loading..."
+                : user?.username
+                ? `@${user.username} (${user.email || user.clerkId})`
+                : user?.email || user?.name || user?.clerkId || "Authenticated Session"}
             </span>
           </div>
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800/80">

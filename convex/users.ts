@@ -1,34 +1,45 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireUser } from "./lib/auth";
+import { requireUser, requireAdmin, isInitialAdmin } from "./lib/auth";
 
 export const UserRoleValidator = v.union(
   v.literal("user"),
   v.literal("issuer"),
-  v.literal("verifier")
+  v.literal("verifier"),
+  v.literal("admin")
 );
 
 /**
  * syncCurrentUser
  *
  * Securely synchronizes the authenticated Clerk user to the Convex database.
- * - Extracts identity exclusively from ctx.auth.getUserIdentity() (zero client trust).
+ * - Extracts identity exclusively from verified ctx.auth.getUserIdentity() (zero client trust for clerkId).
  * - Queries by index 'by_clerkId' to prevent duplicate records.
- * - Sets default role = "user" for all newly created users.
- * - Updates mutable profile data (name, email) if changed.
+ * - Sets default role = "user" for newly created users, or "admin" if email matches INITIAL_ADMIN_EMAIL.
+ * - Updates mutable profile data (username, email, name, imageUrl) if changed.
  */
 export const syncCurrentUser = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    username: v.optional(v.string()),
+    email: v.optional(v.string()),
+    name: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Unauthenticated: Cannot sync user without a valid Clerk session.");
     }
 
+    // Never trust client-provided clerkId — use verified session subject
     const clerkId = identity.subject;
-    const email = identity.email ?? undefined;
-    const name = identity.name ?? undefined;
+    const email = identity.email || args.email || undefined;
+    const name = identity.name || args.name || undefined;
+    const username = identity.nickname || args.username || undefined;
+    const imageUrl = identity.pictureUrl || args.imageUrl || undefined;
     const now = Date.now();
+
+    const shouldBeAdmin = isInitialAdmin(email, clerkId);
 
     // Query for existing user using index
     const existingUser = await ctx.db
@@ -37,18 +48,26 @@ export const syncCurrentUser = mutation({
       .unique();
 
     if (existingUser) {
-      // Ensure role exists on legacy records if any, default to "user"
-      const role = existingUser.role || "user";
+      const role = shouldBeAdmin && existingUser.role !== "admin" ? "admin" : (existingUser.role || "user");
+      const shouldMarkOnboarded =
+        (role === "admin" || role === "issuer" || role === "verifier") && !existingUser.onboardingCompleted;
+
       const needsUpdate =
         existingUser.email !== email ||
         existingUser.name !== name ||
-        existingUser.role !== role;
+        existingUser.username !== username ||
+        existingUser.imageUrl !== imageUrl ||
+        existingUser.role !== role ||
+        shouldMarkOnboarded;
 
       if (needsUpdate) {
         await ctx.db.patch(existingUser._id, {
-          email,
-          name,
+          email: email ?? existingUser.email,
+          name: name ?? existingUser.name,
+          username: username ?? existingUser.username,
+          imageUrl: imageUrl ?? existingUser.imageUrl,
           role,
+          onboardingCompleted: existingUser.onboardingCompleted || shouldMarkOnboarded || false,
           updatedAt: now,
         });
         const updated = await ctx.db.get(existingUser._id);
@@ -58,12 +77,15 @@ export const syncCurrentUser = mutation({
       return { user: existingUser, isNew: false };
     }
 
-    // Insert new user record with default role = "user"
+    // Insert new user record
     const newUserId = await ctx.db.insert("users", {
       clerkId,
+      username,
       email,
       name,
-      role: "user",
+      imageUrl,
+      role: shouldBeAdmin ? "admin" : "user",
+      onboardingCompleted: shouldBeAdmin ? true : false,
       createdAt: now,
       updatedAt: now,
     });
@@ -190,6 +212,47 @@ export const completeUserOnboarding = mutation({
       updatedAt: Date.now(),
     });
     return await ctx.db.get(user._id);
+  },
+});
+
+/**
+ * getAllUsers
+ *
+ * Admin query to fetch all registered users in the network with their roles.
+ */
+export const getAllUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const users = await ctx.db.query("users").collect();
+    return users.sort((a, b) => b.createdAt - a.createdAt);
+  },
+});
+
+/**
+ * adminUpdateUserRole
+ *
+ * Admin mutation to directly modify any user's role.
+ */
+export const adminUpdateUserRole = mutation({
+  args: {
+    targetUserId: v.id("users"),
+    newRole: UserRoleValidator,
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const targetUser = await ctx.db.get(args.targetUserId);
+    if (!targetUser) {
+      throw new Error("User not found.");
+    }
+
+    await ctx.db.patch(args.targetUserId, {
+      role: args.newRole,
+      updatedAt: Date.now(),
+    });
+
+    return await ctx.db.get(args.targetUserId);
   },
 });
 

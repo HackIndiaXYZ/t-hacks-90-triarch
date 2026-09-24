@@ -21,11 +21,12 @@ export default async function DashboardLayout({
     user.emailAddresses?.[0]?.emailAddress ||
     "No primary email";
 
+  const username = user.username;
+
   const displayName =
     user.fullName ||
     [user.firstName, user.lastName].filter(Boolean).join(" ") ||
-    user.username ||
-    "Authenticated User";
+    (username ? `@${username}` : "Authenticated User");
 
   return (
     <div className="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-6 transition-colors duration-200">
@@ -47,6 +48,11 @@ export default async function DashboardLayout({
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
                 {displayName}
               </h1>
+              {username && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                  @{username}
+                </span>
+              )}
               <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-sky-50 text-sky-700 border border-sky-200 dark:bg-cyan-500/10 dark:text-cyan-400 dark:border-cyan-500/20">
                 Verified Session
               </span>
