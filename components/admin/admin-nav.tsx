@@ -2,12 +2,13 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 
 export function AdminNav() {
+  const router = useRouter();
   const pathname = usePathname();
   const { user: clerkUser } = useUser();
   const { signOut } = useClerk();
@@ -124,7 +125,7 @@ export function AdminNav() {
               } else {
                 await signOut();
               }
-              window.location.href = "/";
+              router.push("/");
             }}
             title="Sign Out Current Session"
             className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/30 transition-all cursor-pointer"

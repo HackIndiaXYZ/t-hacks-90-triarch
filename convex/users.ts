@@ -256,3 +256,100 @@ export const adminUpdateUserRole = mutation({
   },
 });
 
+/**
+ * registerUserDid
+ *
+ * Persists the user's generated W3C did:key and public key metadata in Convex.
+ * - Enforces requireUser(ctx).
+ * - NEVER accepts or stores private keys.
+ * - Idempotency: If the user already has a DID registered, returns the existing record without overwriting.
+ * - Checks that the DID starts with "did:key:" and is non-empty.
+ */
+export const registerUserDid = mutation({
+  args: {
+    did: v.string(),
+    publicKey: v.string(),
+    keyType: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+
+    // Validate DID format
+    if (!args.did.startsWith("did:key:") || args.did.length < 20) {
+      throw new Error("Invalid W3C did:key identifier format.");
+    }
+
+    // Idempotency: If user already has a registered DID, return existing user record
+    if (user.did) {
+      return {
+        user,
+        alreadyRegistered: true,
+      };
+    }
+
+    // Ensure DID is unique across the users table
+    const existingWithDid = await ctx.db
+      .query("users")
+      .withIndex("by_did", (q) => q.eq("did", args.did))
+      .unique();
+
+    if (existingWithDid && existingWithDid._id !== user._id) {
+      throw new Error("This DID is already bound to another registered identity.");
+    }
+
+    const now = Date.now();
+    await ctx.db.patch(user._id, {
+      did: args.did,
+      publicKey: args.publicKey,
+      keyType: args.keyType,
+      didCreatedAt: now,
+      updatedAt: now,
+    });
+
+    const updatedUser = await ctx.db.get(user._id);
+    return {
+      user: updatedUser,
+      alreadyRegistered: false,
+    };
+  },
+});
+
+/**
+ * getUserByDid
+ *
+ * Resolves a public user identity document by its W3C DID identifier.
+ */
+export const getUserByDid = query({
+  args: {
+    did: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_did", (q) => q.eq("did", args.did))
+      .unique();
+  },
+});
+
+/**
+ * adminResetUserDid
+ *
+ * Admin utility to reset a user's DID for re-testing key generation.
+ */
+export const adminResetUserDid = mutation({
+  args: {
+    targetUserId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(args.targetUserId, {
+      did: undefined,
+      publicKey: undefined,
+      keyType: undefined,
+      didCreatedAt: undefined,
+      updatedAt: Date.now(),
+    });
+    return await ctx.db.get(args.targetUserId);
+  },
+});
+

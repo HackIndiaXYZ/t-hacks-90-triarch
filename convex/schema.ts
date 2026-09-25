@@ -28,9 +28,15 @@ export default defineSchema({
     imageUrl: v.optional(v.string()),
     role: UserRole,
     onboardingCompleted: v.optional(v.boolean()),
+    did: v.optional(v.string()),
+    publicKey: v.optional(v.string()),
+    keyType: v.optional(v.string()),
+    didCreatedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_clerkId", ["clerkId"]),
+  })
+    .index("by_clerkId", ["clerkId"])
+    .index("by_did", ["did"]),
 
   roleRequests: defineTable({
     userId: v.id("users"),
