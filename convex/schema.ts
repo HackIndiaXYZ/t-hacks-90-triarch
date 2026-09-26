@@ -195,4 +195,36 @@ export default defineSchema({
     .index("by_credentialDocId", ["credentialDocId"])
     .index("by_holderUserId", ["holderUserId"])
     .index("by_status", ["status"]),
+
+  passkeys: defineTable({
+    credentialId: v.string(), // Base64URL credential ID
+    publicKey: v.string(), // Base64URL encoded public key
+    counter: v.number(),
+    deviceType: v.string(), // 'singleDevice' | 'multiDevice'
+    backedUp: v.boolean(),
+    transports: v.optional(v.array(v.string())),
+    userId: v.id("users"),
+    clerkId: v.string(),
+    userEmail: v.optional(v.string()),
+    userName: v.optional(v.string()),
+    deviceName: v.optional(v.string()),
+    aaguid: v.optional(v.string()),
+    createdAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    revoked: v.optional(v.boolean()),
+  })
+    .index("by_credentialId", ["credentialId"])
+    .index("by_userId", ["userId"])
+    .index("by_clerkId", ["clerkId"]),
+
+  webauthnChallenges: defineTable({
+    challenge: v.string(),
+    clerkId: v.optional(v.string()),
+    userId: v.optional(v.id("users")),
+    purpose: v.union(v.literal("registration"), v.literal("authentication")),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_challenge", ["challenge"])
+    .index("by_clerkId", ["clerkId"]),
 });

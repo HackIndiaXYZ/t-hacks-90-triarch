@@ -2,13 +2,14 @@ import React from "react";
 import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
 import { APP_NAME } from "@/lib/constants";
+import { PasskeySignInButton } from "@/components/auth/passkey-signin-button";
 
 export default function SignInPage() {
   return (
     <div className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
-      <div className="relative z-10 w-full max-w-md flex flex-col items-center">
+      <div className="relative z-10 w-full max-w-md flex flex-col items-center space-y-4">
         {/* Header link */}
-        <div className="mb-6 text-center">
+        <div className="mb-2 text-center">
           <Link href="/" className="inline-flex items-center gap-2 group mb-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 p-0.5 flex items-center justify-center shadow-md shadow-sky-500/20">
               <div className="w-full h-full bg-white dark:bg-slate-950 rounded-[6px] flex items-center justify-center transition-colors">
@@ -31,7 +32,18 @@ export default function SignInPage() {
             </span>
           </Link>
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Sign in to your account</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Real authenticated session via Clerk</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Real authenticated session via Clerk &amp; WebAuthn Passkeys</p>
+        </div>
+
+        {/* Passkey Fast Sign-In */}
+        <div className="w-full">
+          <PasskeySignInButton />
+        </div>
+
+        <div className="w-full flex items-center gap-3 py-1">
+          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 uppercase">Or continue with</span>
+          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
         </div>
 
         {/* Real Clerk SignIn component */}

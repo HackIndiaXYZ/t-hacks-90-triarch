@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { SignOutButton } from "@clerk/nextjs";
 import { ConvexAuthStatus } from "@/components/dashboard/convex-auth-status";
 
+import { PasskeysCard } from "@/components/dashboard/passkeys-card";
+
 export default async function SettingsPage() {
   const user = await currentUser();
 
@@ -43,9 +45,12 @@ export default async function SettingsPage() {
           Account & Security Settings
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Clerk session telemetry and Convex backend configuration
+          Clerk session telemetry, WebAuthn Passkeys, and Convex backend configuration
         </p>
       </div>
+
+      {/* WebAuthn Passkeys Section */}
+      <PasskeysCard />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Account Details Card */}

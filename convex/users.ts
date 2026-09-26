@@ -324,10 +324,24 @@ export const getUserByDid = query({
     did: v.string(),
   },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const user = await ctx.db
       .query("users")
       .withIndex("by_did", (q) => q.eq("did", args.did))
       .unique();
+
+    if (!user) return null;
+
+    // Return only public DID resolution metadata
+    return {
+      _id: user._id,
+      did: user.did,
+      name: user.name,
+      username: user.username,
+      publicKey: user.publicKey,
+      keyType: user.keyType,
+      role: user.role,
+      imageUrl: user.imageUrl,
+    };
   },
 });
 

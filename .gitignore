@@ -39,6 +39,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# hardhat
+/artifacts
+/cache
+/typechain-types
+/typechain
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

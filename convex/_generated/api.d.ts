@@ -13,6 +13,7 @@ import type * as blockchain from "../blockchain.js";
 import type * as credentials from "../credentials.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_vcVerifier from "../lib/vcVerifier.js";
+import type * as passkeys from "../passkeys.js";
 import type * as qr from "../qr.js";
 import type * as roleRequests from "../roleRequests.js";
 import type * as users from "../users.js";
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   credentials: typeof credentials;
   "lib/auth": typeof lib_auth;
   "lib/vcVerifier": typeof lib_vcVerifier;
+  passkeys: typeof passkeys;
   qr: typeof qr;
   roleRequests: typeof roleRequests;
   users: typeof users;

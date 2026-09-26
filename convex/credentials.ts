@@ -223,14 +223,35 @@ export const revokeCredential = mutation({
 /**
  * getCredentialById
  *
- * Public/Authenticated query to retrieve a credential by its Convex document ID.
+ * Authenticated query to retrieve a credential by its Convex document ID.
+ * Enforces that only the recipient, issuing authority, verifier, or admin can access the credential.
  */
 export const getCredentialById = query({
   args: {
     credentialDocId: v.id("credentials"),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.credentialDocId);
+    const user = await requireUser(ctx);
+    const credential = await ctx.db.get(args.credentialDocId);
+
+    if (!credential) {
+      return null;
+    }
+
+    const isRecipient =
+      credential.recipientUserId === user._id ||
+      (user.did && credential.recipientDid === user.did);
+    const isIssuer =
+      credential.issuerUserId === user._id ||
+      (user.did && credential.issuerDid === user.did);
+    const isVerifierOrAdmin =
+      user.role === "verifier" || user.role === "admin";
+
+    if (!isRecipient && !isIssuer && !isVerifierOrAdmin) {
+      throw new Error("Forbidden: You do not have permission to access this credential.");
+    }
+
+    return credential;
   },
 });
 
