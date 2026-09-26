@@ -3,12 +3,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useClerk, useUser, useSessionList } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useConvexAuth, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 export function AccountSwitcher() {
   const router = useRouter();
-  const { isAuthenticated } = useConvexAuth();
   const { user: currentClerkUser } = useUser();
   const { setActive, signOut, openSignIn } = useClerk();
   const { sessions, isLoaded: isSessionsLoaded } = useSessionList();
@@ -16,10 +15,7 @@ export function AccountSwitcher() {
   const [isSwitching, setIsSwitching] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const convexUser = useQuery(
-    api.users.getCurrentUser,
-    isAuthenticated ? {} : "skip"
-  );
+  const convexUser = useQuery(api.users.getCurrentUser);
 
   // Close dropdown on click outside
   useEffect(() => {
