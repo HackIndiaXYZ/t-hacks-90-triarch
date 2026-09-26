@@ -120,7 +120,7 @@ export function DashboardNav() {
 
           <button
             onClick={async () => {
-              await signOut({ redirectUrl: "/" });
+              await signOut({ redirectUrl: "/sign-in" });
             }}
             title="Sign Out Current Session"
             className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/30 transition-all duration-200 flex items-center gap-1.5 cursor-pointer"

@@ -55,7 +55,7 @@ export function AccountSwitcher() {
     try {
       await signOut({ sessionId });
       if (sessions.length <= 1) {
-        router.push("/");
+        router.push("/sign-in");
       } else {
         router.refresh();
       }
