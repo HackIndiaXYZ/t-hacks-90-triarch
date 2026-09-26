@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useConvexAuth } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 
 interface DashboardAuthGuardProps {
   children: React.ReactNode;
@@ -10,15 +10,16 @@ interface DashboardAuthGuardProps {
 
 export function DashboardAuthGuard({ children }: DashboardAuthGuardProps) {
   const router = useRouter();
-  const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
+  const { isLoaded: isClerkLoaded, isSignedIn } = useUser();
 
   useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
+    if (isClerkLoaded && !isSignedIn) {
       router.replace("/sign-in");
     }
-  }, [isAuthLoading, isAuthenticated, router]);
+  }, [isClerkLoaded, isSignedIn, router]);
 
-  if (isAuthLoading) {
+  // If Clerk is still loading its session on client hydration
+  if (!isClerkLoaded) {
     return (
       <div className="flex-1 min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
         <div className="relative mb-4">
@@ -34,18 +35,20 @@ export function DashboardAuthGuard({ children }: DashboardAuthGuardProps) {
           </span>
         </div>
         <h3 className="text-base font-bold text-slate-900 dark:text-white">
-          Authenticating Verifi Session...
+          Loading Verifi Workspace...
         </h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm font-sans">
-          Validating cryptographic session credentials with Convex...
+          Validating authenticated user session...
         </p>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
+  // If confirmed signed out from Clerk, show nothing while router.replace executes
+  if (!isSignedIn) {
     return null;
   }
 
+  // User is authenticated in Clerk — render dashboard and allow Convex reactive sync
   return <>{children}</>;
 }
