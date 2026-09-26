@@ -172,4 +172,27 @@ export default defineSchema({
     .index("by_recipientDid", ["recipientDid"])
     .index("by_result", ["result"])
     .index("by_verifiedAt", ["verifiedAt"]),
+
+  qrShareTokens: defineTable({
+    token: v.string(), // Secure, non-guessable 32-byte hex token
+    credentialDocId: v.id("credentials"),
+    credentialId: v.string(),
+    holderUserId: v.id("users"),
+    holderClerkId: v.string(),
+    expiresAt: v.number(), // Timestamp in ms
+    status: v.union(
+      v.literal("active"),
+      v.literal("used"),
+      v.literal("revoked"),
+      v.literal("expired")
+    ),
+    useCount: v.number(),
+    maxUses: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_credentialDocId", ["credentialDocId"])
+    .index("by_holderUserId", ["holderUserId"])
+    .index("by_status", ["status"]),
 });

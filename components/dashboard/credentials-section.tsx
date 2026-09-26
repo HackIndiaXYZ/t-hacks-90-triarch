@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { IssueCredentialModal } from "./issue-credential-modal";
 import { CredentialViewerModal } from "./credential-viewer-modal";
+import { QrShareModal } from "./qr-share-modal";
 
 export function CredentialsSection() {
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
@@ -33,6 +34,19 @@ export function CredentialsSection() {
 
   const [activeTab, setActiveTab] = useState<"received" | "issued">("received");
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [qrShareState, setQrShareState] = useState<{
+    isOpen: boolean;
+    credentialDocId: Id<"credentials"> | null;
+    credentialTitle: string;
+    credentialId: string;
+    issuerName: string;
+  }>({
+    isOpen: false,
+    credentialDocId: null,
+    credentialTitle: "",
+    credentialId: "",
+    issuerName: "",
+  });
   const [viewingVc, setViewingVc] = useState<{
     isOpen: boolean;
     rawVcJson: string;
@@ -416,15 +430,36 @@ export function CredentialsSection() {
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <button
-                      onClick={() => handleInspectVc(cred)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 dark:text-cyan-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/30 transition-all cursor-pointer flex items-center gap-1.5"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                      </svg>
-                      <span>Inspect W3C VC</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => handleInspectVc(cred)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 dark:text-cyan-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/30 transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                        <span>Inspect W3C VC</span>
+                      </button>
+
+                      {/* Share QR Button */}
+                      <button
+                        onClick={() => {
+                          setQrShareState({
+                            isOpen: true,
+                            credentialDocId: cred._id,
+                            credentialTitle: typeName,
+                            credentialId: cred.credentialId,
+                            issuerName: cred.issuerName,
+                          });
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-500/30 transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                        </svg>
+                        <span>Share QR</span>
+                      </button>
+                    </div>
 
                     <div className="flex items-center gap-1.5">
                       {/* Anchor / Retry Anchor Button for Issuers & Admins */}
@@ -488,6 +523,17 @@ export function CredentialsSection() {
         recipientDid={viewingVc.recipientDid}
         status={viewingVc.status}
       />
+
+      {qrShareState.credentialDocId && (
+        <QrShareModal
+          isOpen={qrShareState.isOpen}
+          onClose={() => setQrShareState((prev) => ({ ...prev, isOpen: false }))}
+          credentialDocId={qrShareState.credentialDocId}
+          credentialTitle={qrShareState.credentialTitle}
+          credentialId={qrShareState.credentialId}
+          issuerName={qrShareState.issuerName}
+        />
+      )}
     </div>
   );
 }

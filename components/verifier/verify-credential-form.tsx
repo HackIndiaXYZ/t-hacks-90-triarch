@@ -157,13 +157,16 @@ export function VerifyCredentialForm() {
   );
   const verifyMutation = useMutation(api.verifications.verifyVerifiableCredential);
 
-  const [inputMode, setInputMode] = useState<"select" | "raw">("select");
+  const [inputMode, setInputMode] = useState<"select" | "qr" | "raw">("select");
   const [selectedCredDocId, setSelectedCredDocId] = useState<string>("");
   const [rawJsonInput, setRawJsonInput] = useState<string>("");
+  const [qrTokenInput, setQrTokenInput] = useState<string>("");
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [verifiedReportsByCred, setVerifiedReportsByCred] = useState<Record<string, VerificationReport>>({});
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false);
+
+  const verifyQrMutation = useMutation(api.qr.resolveAndVerifyQrToken);
 
   // Derive active selection for primary platform credentials
   const effectiveDocId =
@@ -186,6 +189,10 @@ export function VerifyCredentialForm() {
   const currentCredKey =
     inputMode === "select"
       ? effectiveDocId
+      : inputMode === "qr"
+      ? (qrTokenInput.includes("/verify/qr/")
+          ? qrTokenInput.split("/verify/qr/")[1].split("?")[0].split("#")[0]
+          : qrTokenInput).trim()
       : credentialCardInfo?.credentialId || rawJsonInput.trim();
 
   // Find latest authoritative audit log from Convex for this credential (if already verified previously)
@@ -244,7 +251,7 @@ export function VerifyCredentialForm() {
     setErrorMsg(null);
   };
 
-  const handleModeChange = (mode: "select" | "raw") => {
+  const handleModeChange = (mode: "select" | "qr" | "raw") => {
     setInputMode(mode);
     setErrorMsg(null);
   };
@@ -255,8 +262,84 @@ export function VerifyCredentialForm() {
     setErrorMsg(null);
   };
 
+  const handleVerifyQr = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (isVerifying) return;
+
+    let cleanToken = qrTokenInput.trim();
+    if (!cleanToken) {
+      setErrorMsg("Please enter a valid QR verification token or verification URL.");
+      return;
+    }
+
+    if (cleanToken.includes("/verify/qr/")) {
+      cleanToken = cleanToken.split("/verify/qr/")[1].split("?")[0].split("#")[0];
+    }
+
+    setIsVerifying(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await verifyQrMutation({ token: cleanToken });
+      if (!res.success || !res.credential) {
+        setErrorMsg(res.error || "QR token verification failed.");
+        return;
+      }
+
+      const qrReport: VerificationReport = {
+        verificationId: `qr_${cleanToken.slice(0, 8)}`,
+        result: res.result,
+        credentialId: res.credential.credentialId,
+        credentialType: res.credential.type,
+        issuer: {
+          did: res.credential.issuerDid,
+          name: res.credential.issuerName,
+        },
+        subjectDid: res.credential.recipientDid,
+        issuanceDate: new Date(res.credential.issuedAt).toLocaleDateString(),
+        expirationDate: res.credential.expirationDate
+          ? new Date(res.credential.expirationDate).toLocaleDateString()
+          : null,
+        claims: (res.credential.claims as Record<string, unknown>) || {},
+        signatureValid: res.verificationDetails?.signatureValid ?? false,
+        integrityValid: res.verificationDetails?.integrityValid ?? false,
+        statusValid: res.verificationDetails?.statusValid ?? false,
+        expirationValid: res.verificationDetails?.expirationValid ?? false,
+        failureReason: res.failureReason,
+        blockchain: {
+          anchored: res.blockchain?.isAnchored ?? false,
+          credentialHash: undefined,
+          contractAddress: res.blockchain?.contractAddress,
+          txHash: res.blockchain?.txHash,
+          blockNumber: res.blockchain?.blockNumber,
+          network: res.blockchain?.network || "sepolia",
+          anchoredAt: res.blockchain?.anchoredAt,
+        },
+        verifiedAt: res.verifiedAt ?? 0,
+        verifier: {
+          id: "qr_verifier",
+          name: "TrustID QR Enclave Verifier",
+          role: "verifier",
+        },
+      };
+
+      setVerifiedReportsByCred((prev) => ({
+        ...prev,
+        [cleanToken]: qrReport,
+      }));
+    } catch (err: unknown) {
+      console.error("QR Verification failed:", err);
+      setErrorMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   const handleVerify = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (inputMode === "qr") {
+      return handleVerifyQr(e);
+    }
     if (isVerifying) return; // Prevent duplicate execution
     if (!effectiveRawJson.trim()) {
       setErrorMsg("Please select a credential or provide a valid W3C JSON-LD credential document.");
@@ -337,42 +420,62 @@ export function VerifyCredentialForm() {
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
               <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                {inputMode === "select" ? "Platform Credential Verification" : "Advanced W3C JSON-LD Verification"}
+                {inputMode === "select"
+                  ? "Platform Credential Verification"
+                  : inputMode === "qr"
+                  ? "QR Token & URL Verification"
+                  : "Advanced W3C JSON-LD Verification"}
               </h2>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               {inputMode === "select"
                 ? "Inspect platform-issued credentials and trigger server-side cryptographic proof verification"
+                : inputMode === "qr"
+                ? "Verify a credential shared via QR code token or TrustID verification URL"
                 : "Paste external or raw W3C Verifiable Credentials to verify cryptographic signatures and integrity"}
             </p>
           </div>
 
-          {/* Clean Mode Switcher */}
-          <div className="flex items-center gap-2 self-start md:self-auto">
-            {inputMode === "select" ? (
-              <button
-                type="button"
-                onClick={() => handleModeChange("raw")}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-50 hover:bg-indigo-50/60 dark:bg-slate-950 dark:hover:bg-indigo-950/40 border border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-500/30 transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
-                title="Open Advanced Verification to paste custom W3C JSON-LD"
-              >
-                <svg className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                </svg>
-                <span>Advanced: Paste Raw JSON</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => handleModeChange("select")}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border border-indigo-200 dark:border-indigo-500/30 transition-all flex items-center gap-2 cursor-pointer shadow-xs"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                </svg>
-                <span>Back to Platform Credentials</span>
-              </button>
-            )}
+          {/* Clean 3-Way Mode Switcher */}
+          <div className="flex flex-wrap items-center gap-1.5 self-start md:self-auto bg-slate-100 dark:bg-slate-950 p-1 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => handleModeChange("select")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                inputMode === "select"
+                  ? "bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              Platform Credentials
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleModeChange("qr")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                inputMode === "qr"
+                  ? "bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+              </svg>
+              <span>Scan / QR Token</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleModeChange("raw")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                inputMode === "raw"
+                  ? "bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              Raw JSON
+            </button>
           </div>
         </div>
 
@@ -429,6 +532,64 @@ export function VerifyCredentialForm() {
                   })}
                 </select>
               )}
+            </div>
+          )}
+
+          {/* QR TOKEN VERIFICATION FLOW */}
+          {inputMode === "qr" && (
+            <div className="space-y-4 p-5 rounded-2xl bg-slate-50/70 dark:bg-slate-950/60 border border-emerald-500/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>Enter QR Verification Token or Scanned URL</span>
+                    <span className="px-2 py-0.2 rounded-full text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
+                      QR / Scan
+                    </span>
+                  </span>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Paste the 64-character verification token or the full QR verification link shared by the credential holder.
+                  </p>
+                </div>
+                {qrTokenInput && (
+                  <button
+                    type="button"
+                    onClick={() => setQrTokenInput("")}
+                    className="text-[11px] font-semibold text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
+                  >
+                    Clear Input
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={qrTokenInput}
+                  onChange={(e) => setQrTokenInput(e.target.value)}
+                  placeholder="e.g. 5d9a7f34c2b1... or https://.../verify/qr/5d9a7f34c2b1..."
+                  className="flex-1 px-4 py-3 rounded-xl font-mono text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                />
+                <button
+                  type="button"
+                  onClick={handleVerifyQr}
+                  disabled={isVerifying || !qrTokenInput.trim()}
+                  className="px-5 py-3 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shrink-0"
+                >
+                  {isVerifying ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Resolving Token...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                      <span>Verify QR Token</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
 
