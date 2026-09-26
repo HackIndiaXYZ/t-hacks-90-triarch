@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 
@@ -11,6 +11,16 @@ interface DashboardAuthGuardProps {
 export function DashboardAuthGuard({ children }: DashboardAuthGuardProps) {
   const router = useRouter();
   const { isLoaded: isClerkLoaded, isSignedIn } = useUser();
+  const [hasTimeout, setHasTimeout] = useState(false);
+
+  useEffect(() => {
+    // Failsafe timer: if client-side Clerk SDK hydration takes longer than 2.5s,
+    // release the blocking spinner and render the server-verified workspace
+    const timer = setTimeout(() => {
+      setHasTimeout(true);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (isClerkLoaded && !isSignedIn) {
@@ -18,8 +28,13 @@ export function DashboardAuthGuard({ children }: DashboardAuthGuardProps) {
     }
   }, [isClerkLoaded, isSignedIn, router]);
 
-  // If Clerk is still loading its session on client hydration
-  if (!isClerkLoaded) {
+  // If confirmed signed out from Clerk, show nothing while router redirects
+  if (isClerkLoaded && !isSignedIn) {
+    return null;
+  }
+
+  // If Clerk is still hydrating and timeout hasn't fired yet, show initial spinner
+  if (!isClerkLoaded && !hasTimeout) {
     return (
       <div className="flex-1 min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
         <div className="relative mb-4">
@@ -44,11 +59,6 @@ export function DashboardAuthGuard({ children }: DashboardAuthGuardProps) {
     );
   }
 
-  // If confirmed signed out from Clerk, show nothing while router.replace executes
-  if (!isSignedIn) {
-    return null;
-  }
-
-  // User is authenticated in Clerk — render dashboard and allow Convex reactive sync
+  // User session verified on server / hydrated on client — render workspace
   return <>{children}</>;
 }
