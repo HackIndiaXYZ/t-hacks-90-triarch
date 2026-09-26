@@ -27,6 +27,9 @@ export function CredentialsSection() {
   );
 
   const revokeMutation = useMutation(api.credentials.revokeCredential);
+  const recordAnchorPending = useMutation(api.blockchain.recordAnchorPending);
+  const recordAnchorSuccess = useMutation(api.blockchain.recordAnchorSuccess);
+  const recordAnchorFailure = useMutation(api.blockchain.recordAnchorFailure);
 
   const [activeTab, setActiveTab] = useState<"received" | "issued">("received");
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
@@ -49,7 +52,8 @@ export function CredentialsSection() {
   });
 
   const [revokingId, setRevokingId] = useState<string | null>(null);
-  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [anchoringId, setAnchoringId] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<{ message: string; txHash?: string } | null>(null);
 
   const handleInspectVc = (cred: {
     rawVcJson: string;
@@ -82,13 +86,75 @@ export function CredentialsSection() {
         credentialDocId,
         reason: "Revoked by issuing authority",
       });
-      setSuccessToast(`Credential '${credentialName}' has been revoked.`);
+      setSuccessToast({ message: `Credential '${credentialName}' has been revoked.` });
       setTimeout(() => setSuccessToast(null), 4000);
     } catch (err) {
       console.error("Failed to revoke credential:", err);
       alert(err instanceof Error ? err.message : "Failed to revoke credential.");
     } finally {
       setRevokingId(null);
+    }
+  };
+
+  const handleAnchorToSepolia = async (cred: {
+    _id: Id<"credentials">;
+    rawVcJson: string;
+    type: string[];
+  }) => {
+    setAnchoringId(cred._id);
+    const typeName = cred.type.find((t) => t !== "VerifiableCredential") || "VerifiableCredential";
+
+    try {
+      // 1. Mark pending in Convex
+      await recordAnchorPending({
+        credentialDocId: cred._id,
+        credentialHash: "pending_hash_calculation",
+        network: "sepolia",
+        chainId: 11155111,
+        contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0xcd72712c39C5da6de61Ba40AF5EA69Bcd43185c5",
+      });
+
+      // 2. Broadcast on-chain transaction to Ethereum Sepolia via server route
+      const res = await fetch("/api/blockchain/anchor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rawVcJson: cred.rawVcJson }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to anchor to Ethereum Sepolia.");
+      }
+
+      const anchorResult = data.data;
+
+      // 3. Save confirmed transaction in Convex
+      await recordAnchorSuccess({
+        credentialDocId: cred._id,
+        credentialHash: anchorResult.credentialHash,
+        transactionHash: anchorResult.transactionHash || "0x_already_anchored",
+        blockNumber: anchorResult.blockNumber || 0,
+        anchoredAt: anchorResult.anchoredAt || Date.now(),
+        contractAddress: anchorResult.contractAddress,
+        network: anchorResult.network || "sepolia",
+        chainId: anchorResult.chainId || 11155111,
+      });
+
+      setSuccessToast({
+        message: `Successfully anchored '${typeName}' to Ethereum Sepolia!`,
+        txHash: anchorResult.transactionHash,
+      });
+      setTimeout(() => setSuccessToast(null), 7000);
+    } catch (err: unknown) {
+      console.error("[Blockchain] Anchoring failed:", err);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      await recordAnchorFailure({
+        credentialDocId: cred._id,
+        failureReason: errorMsg,
+      });
+      alert(`Blockchain Anchoring Failed: ${errorMsg}`);
+    } finally {
+      setAnchoringId(null);
     }
   };
 
@@ -99,14 +165,26 @@ export function CredentialsSection() {
     <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200/90 dark:border-slate-800 backdrop-blur-md relative overflow-hidden group hover:border-indigo-500/40 transition-all shadow-sm dark:shadow-xl dark:shadow-indigo-950/20 space-y-5">
       {/* Toast Feedback */}
       {successToast && (
-        <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/40 text-xs font-mono text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-3 shadow-md animate-in fade-in">
+        <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/40 text-xs font-mono text-emerald-800 dark:text-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md animate-in fade-in">
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
             </svg>
-            <span className="font-semibold">{successToast}</span>
+            <div className="flex flex-col">
+              <span className="font-semibold">{successToast.message}</span>
+              {successToast.txHash && successToast.txHash !== "0x_already_anchored" && (
+                <a
+                  href={`https://sepolia.etherscan.io/tx/${successToast.txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-700 dark:text-emerald-400 underline font-bold text-[11px] mt-0.5 break-all"
+                >
+                  View on Sepolia Etherscan: {successToast.txHash} ↗
+                </a>
+              )}
+            </div>
           </div>
-          <button onClick={() => setSuccessToast(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer font-bold">
+          <button onClick={() => setSuccessToast(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer font-bold self-start sm:self-auto">
             &times;
           </button>
         </div>
@@ -128,21 +206,47 @@ export function CredentialsSection() {
           <div>
             <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               <span>Verifiable Credentials Vault</span>
-              <span className="px-2 py-0.2 rounded-full text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 uppercase">
-                W3C JSON-LD
+              <span className="text-[10px] px-2 py-0.2 rounded-full font-mono font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
+                Ethereum Sepolia Anchored
               </span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Tamper-evident, cryptographically signed digital attestations
+              W3C-compliant digital credentials with on-chain cryptographic anchoring
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        {/* Tab Selector & Issue Button */}
+        <div className="flex items-center gap-2">
+          {isIssuer && (
+            <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold">
+              <button
+                onClick={() => setActiveTab("received")}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  activeTab === "received"
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                Received ({receivedCredentials ? receivedCredentials.length : 0})
+              </button>
+              <button
+                onClick={() => setActiveTab("issued")}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  activeTab === "issued"
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                Issued ({issuedCredentials ? issuedCredentials.length : 0})
+              </button>
+            </div>
+          )}
+
           {isIssuer && (
             <button
               onClick={() => setIsIssueModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-sm shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-md shadow-indigo-500/20 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -150,53 +254,22 @@ export function CredentialsSection() {
               <span>Issue Credential</span>
             </button>
           )}
-
-          <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
-            {countDisplay} Item{countDisplay !== 1 ? "s" : ""}
-          </span>
         </div>
       </div>
 
-      {/* Tabs for Issuers */}
-      {isIssuer && (
-        <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 w-fit">
-          <button
-            onClick={() => setActiveTab("received")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === "received"
-                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-            }`}
-          >
-            My Received Credentials ({receivedCredentials?.length ?? 0})
-          </button>
-          <button
-            onClick={() => setActiveTab("issued")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === "issued"
-                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-            }`}
-          >
-            Issuer Console ({issuedCredentials?.length ?? 0})
-          </button>
-        </div>
-      )}
-
-      {/* Credentials List Body */}
+      {/* Content Area */}
       {isAuthLoading || displayedList === undefined ? (
-        <div className="py-12 flex flex-col items-center justify-center gap-2 text-xs font-mono text-slate-500">
-          <div className="w-6 h-6 border-2 border-indigo-500/30 border-t-indigo-600 rounded-full animate-spin" />
-          <span>Loading cryptographic credentials...</span>
+        <div className="py-12 text-center text-xs font-mono text-slate-500">
+          Loading cryptographic credentials...
         </div>
-      ) : displayedList.length === 0 ? (
-        <div className="py-12 px-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 mb-2 shadow-xs">
+      ) : countDisplay === 0 ? (
+        <div className="py-12 px-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center">
+          <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 mb-3 shadow-xs">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">
             {activeTab === "received" ? "No credentials received yet." : "No credentials issued yet."}
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed font-sans">
@@ -234,6 +307,10 @@ export function CredentialsSection() {
               ? Object.entries(cred.credentialData)
               : [];
 
+            const isAnchored = cred.blockchainAnchorStatus === "ANCHORED";
+            const isPending = cred.blockchainAnchorStatus === "PENDING" || anchoringId === cred._id;
+            const isFailed = cred.blockchainAnchorStatus === "FAILED";
+
             return (
               <div
                 key={cred._id}
@@ -251,15 +328,17 @@ export function CredentialsSection() {
                       </h4>
                     </div>
 
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
-                        cred.status === "active"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30"
-                          : "bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30"
-                      }`}
-                    >
-                      {cred.status}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
+                          cred.status === "active"
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30"
+                            : "bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30"
+                        }`}
+                      >
+                        {cred.status}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Claims Attributes Grid */}
@@ -280,14 +359,63 @@ export function CredentialsSection() {
                   </div>
                 </div>
 
+                {/* Blockchain Anchor Status Box */}
+                <div className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800 flex flex-col gap-1.5 text-[11px] font-mono">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 uppercase text-[10px] font-bold flex items-center gap-1">
+                      <span>Ethereum Sepolia Anchor</span>
+                    </span>
+                    {isAnchored ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded-full font-bold text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span>Anchored</span>
+                      </span>
+                    ) : isPending ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded-full font-bold text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                        <span>Anchoring...</span>
+                      </span>
+                    ) : isFailed ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded-full font-bold text-[10px] bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40">
+                        <span>Failed</span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        Off-Chain
+                      </span>
+                    )}
+                  </div>
+
+                  {isAnchored && cred.blockchainTxHash && (
+                    <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
+                      <span className="text-slate-500">Tx:</span>
+                      <a
+                        href={`https://sepolia.etherscan.io/tx/${cred.blockchainTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 dark:text-cyan-400 hover:underline truncate max-w-[170px]"
+                        title={cred.blockchainTxHash}
+                      >
+                        {cred.blockchainTxHash} ↗
+                      </a>
+                    </div>
+                  )}
+
+                  {isFailed && cred.blockchainFailureReason && (
+                    <span className="text-[10px] text-rose-600 dark:text-rose-400 truncate" title={cred.blockchainFailureReason}>
+                      Error: {cred.blockchainFailureReason}
+                    </span>
+                  )}
+                </div>
+
                 {/* Card Footer */}
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
                   <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400">
                     <span>Issued: {issuedDate}</span>
                     <span>Expires: {expDate}</span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <button
                       onClick={() => handleInspectVc(cred)}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 dark:text-cyan-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/30 transition-all cursor-pointer flex items-center gap-1.5"
@@ -298,15 +426,38 @@ export function CredentialsSection() {
                       <span>Inspect W3C VC</span>
                     </button>
 
-                    {isIssuer && activeTab === "issued" && cred.status === "active" && (
-                      <button
-                        onClick={() => handleRevoke(cred._id, typeName)}
-                        disabled={revokingId === cred._id}
-                        className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 transition-all cursor-pointer disabled:opacity-50"
-                      >
-                        {revokingId === cred._id ? "Revoking..." : "Revoke"}
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {/* Anchor / Retry Anchor Button for Issuers & Admins */}
+                      {isIssuer && activeTab === "issued" && (!isAnchored || isFailed) && (
+                        <button
+                          onClick={() => handleAnchorToSepolia(cred)}
+                          disabled={isPending}
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 shadow-xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {isPending ? (
+                            <>
+                              <div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                              <span>Anchoring...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Ξ</span>
+                              <span>{isFailed ? "Retry Anchor" : "Anchor to Sepolia"}</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+
+                      {isIssuer && activeTab === "issued" && cred.status === "active" && (
+                        <button
+                          onClick={() => handleRevoke(cred._id, typeName)}
+                          disabled={revokingId === cred._id}
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {revokingId === cred._id ? "Revoking..." : "Revoke"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -321,7 +472,7 @@ export function CredentialsSection() {
           isOpen={isIssueModalOpen}
           onClose={() => setIsIssueModalOpen(false)}
           onSuccess={() => {
-            setSuccessToast("Verifiable Credential successfully signed and issued!");
+            setSuccessToast({ message: "Verifiable Credential successfully signed and issued!" });
             setTimeout(() => setSuccessToast(null), 5000);
           }}
         />

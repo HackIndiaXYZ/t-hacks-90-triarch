@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -90,8 +90,13 @@ export function IssueCredentialModal({
   onSuccess,
 }: IssueCredentialModalProps) {
   const { user: clerkUser } = useUser();
-  const issuerUser = useQuery(api.users.getCurrentUser, clerkUser ? {} : "skip");
-  const isIssuerOrAdmin = issuerUser?.role === "issuer" || issuerUser?.role === "admin";
+  const { isAuthenticated } = useConvexAuth();
+  const issuerUser = useQuery(
+    api.users.getCurrentUser,
+    isAuthenticated ? {} : "skip"
+  );
+  const isIssuerOrAdmin =
+    isAuthenticated && (issuerUser?.role === "issuer" || issuerUser?.role === "admin");
 
   const registeredRecipients = useQuery(
     api.credentials.getRegisteredRecipients,
@@ -99,9 +104,13 @@ export function IssueCredentialModal({
   );
   const issueMutation = useMutation(api.credentials.issueVerifiableCredential);
   const registerDidMutation = useMutation(api.users.registerUserDid);
+  const recordAnchorPending = useMutation(api.blockchain.recordAnchorPending);
+  const recordAnchorSuccess = useMutation(api.blockchain.recordAnchorSuccess);
+  const recordAnchorFailure = useMutation(api.blockchain.recordAnchorFailure);
 
   const [selectedTemplateIndex, setSelectedTemplateIndex] = useState(0);
   const [credentialType, setCredentialType] = useState(CREDENTIAL_TEMPLATES[0].type);
+  const [autoAnchorSepolia, setAutoAnchorSepolia] = useState(true);
   const [recipientDid, setRecipientDid] = useState("");
   const [selectedRecipientId, setSelectedRecipientId] = useState("");
   const [issuerName, setIssuerName] = useState("");
@@ -263,7 +272,7 @@ export function IssueCredentialModal({
       setSigningProgress("Recording signed credential in Convex...");
 
       // 5. Store signed credential in Convex
-      await issueMutation({
+      const issueResult = await issueMutation({
         credentialId,
         type: signedVc.type,
         issuerDid: activeIssuerDid,
@@ -275,6 +284,54 @@ export function IssueCredentialModal({
         rawVcJson,
         proof: signedVc.proof,
       });
+
+      // 6. Anchor to Ethereum Sepolia if requested
+      if (autoAnchorSepolia && issueResult?.credential?._id) {
+        setSigningProgress("Anchoring cryptographic hash to Ethereum Sepolia blockchain...");
+        const credDocId = issueResult.credential._id;
+        try {
+          await recordAnchorPending({
+            credentialDocId: credDocId,
+            credentialHash: "pending_hash_calculation",
+            network: "sepolia",
+            chainId: 11155111,
+            contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0xcd72712c39C5da6de61Ba40AF5EA69Bcd43185c5",
+          });
+
+          const anchorRes = await fetch("/api/blockchain/anchor", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rawVcJson }),
+          });
+
+          const anchorData = await anchorRes.json();
+          if (anchorRes.ok && anchorData.success) {
+            const resData = anchorData.data;
+            await recordAnchorSuccess({
+              credentialDocId: credDocId,
+              credentialHash: resData.credentialHash,
+              transactionHash: resData.transactionHash || "0x_already_anchored",
+              blockNumber: resData.blockNumber || 0,
+              anchoredAt: resData.anchoredAt || Date.now(),
+              contractAddress: resData.contractAddress,
+              network: resData.network || "sepolia",
+              chainId: resData.chainId || 11155111,
+            });
+          } else {
+            const failReason = anchorData?.error || "Failed to broadcast to Ethereum Sepolia";
+            await recordAnchorFailure({
+              credentialDocId: credDocId,
+              failureReason: failReason,
+            });
+          }
+        } catch (anchorErr) {
+          console.warn("[Blockchain] Post-issuance anchor failed:", anchorErr);
+          await recordAnchorFailure({
+            credentialDocId: credDocId,
+            failureReason: anchorErr instanceof Error ? anchorErr.message : String(anchorErr),
+          });
+        }
+      }
 
       if (onSuccess) onSuccess();
       onClose();
@@ -480,6 +537,28 @@ export function IssueCredentialModal({
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Real Blockchain Anchoring Option */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <input
+                id="auto-anchor-checkbox"
+                type="checkbox"
+                checked={autoAnchorSepolia}
+                onChange={(e) => setAutoAnchorSepolia(e.target.checked)}
+                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 cursor-pointer"
+              />
+              <label htmlFor="auto-anchor-checkbox" className="text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer flex items-center gap-1.5">
+                <span>Anchor Hash to Ethereum Sepolia Testnet</span>
+                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-medium bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                  Chain 11155111
+                </span>
+              </label>
+            </div>
+            <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
+              Immutable on-chain timestamp
+            </span>
           </div>
 
           {/* Cryptographic Signing Info Note */}

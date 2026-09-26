@@ -13,7 +13,7 @@ export function NavbarAdminLink() {
   );
   const stats = useQuery(
     api.roleRequests.getRoleRequestStats,
-    user?.role === "admin" ? {} : "skip"
+    isAuthenticated && user?.role === "admin" ? {} : "skip"
   );
 
   if (user?.role !== "admin") {

@@ -1,0 +1,126 @@
+{
+  "address": "0xcd72712c39C5da6de61Ba40AF5EA69Bcd43185c5",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "deployedAt": "2026-09-26T12:34:30.210Z",
+  "deployer": "0xB28b914385BAA46A0c3c0175c15642fE01340D54",
+  "txHash": "0x55d5fb7629bf18c3b9674141806cc06108dca0ca55e7a24a9db60226abb7e16a",
+  "blockNumber": 11786246,
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "credentialHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "CredentialAlreadyAnchored",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidCredentialHash",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "credentialHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "anchoredBy",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "CredentialAnchored",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "credentialHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "anchorCredential",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "credentialHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getAnchor",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "anchoredBy",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "credentialHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "isAnchored",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "totalAnchored",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+}

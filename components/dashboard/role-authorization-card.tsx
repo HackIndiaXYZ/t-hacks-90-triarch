@@ -256,14 +256,33 @@ export function RoleAuthorizationCard() {
               <span>&rarr;</span>
             </Link>
           </>
-        ) : userRole === "issuer" || userRole === "verifier" ? (
+        ) : userRole === "verifier" ? (
           <>
             <div>
               <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
-                {userRole === "issuer" ? "Authorized Credential Issuer" : "Authorized Relying Party Verifier"}
+                Authorized Relying Party Verifier
               </span>
               <span className="text-[11px] text-slate-500 dark:text-slate-400 font-sans">
-                Your authority credentials are fully verified and active on the Verifi network.
+                Your verifier credentials are fully authorized to cryptographically verify credentials.
+              </span>
+            </div>
+
+            <Link
+              href="/verifier"
+              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all self-start sm:self-auto shrink-0 flex items-center gap-1.5"
+            >
+              <span>Verifier Console</span>
+              <span>&rarr;</span>
+            </Link>
+          </>
+        ) : userRole === "issuer" ? (
+          <>
+            <div>
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
+                Authorized Credential Issuer
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-sans">
+                Your issuing credentials are fully verified and active on the Verifi network.
               </span>
             </div>
 

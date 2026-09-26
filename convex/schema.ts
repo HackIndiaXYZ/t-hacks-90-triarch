@@ -24,6 +24,19 @@ export const CredentialStatus = v.union(
   v.literal("revoked")
 );
 
+export const VerificationResult = v.union(
+  v.literal("VERIFIED"),
+  v.literal("INVALID"),
+  v.literal("REVOKED"),
+  v.literal("EXPIRED")
+);
+
+export const AnchorStatus = v.union(
+  v.literal("PENDING"),
+  v.literal("ANCHORED"),
+  v.literal("FAILED")
+);
+
 export default defineSchema({
   users: defineTable({
     clerkId: v.string(),
@@ -85,6 +98,15 @@ export default defineSchema({
       verificationMethod: v.string(),
       jws: v.string(),
     }),
+    // Blockchain Sepolia Anchoring Fields
+    blockchainAnchorStatus: v.optional(AnchorStatus),
+    blockchainTxHash: v.optional(v.string()),
+    blockchainBlockNumber: v.optional(v.number()),
+    blockchainCredentialHash: v.optional(v.string()),
+    blockchainAnchoredAt: v.optional(v.number()),
+    blockchainContractAddress: v.optional(v.string()),
+    blockchainNetwork: v.optional(v.string()),
+    blockchainFailureReason: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -93,5 +115,61 @@ export default defineSchema({
     .index("by_recipientUserId", ["recipientUserId"])
     .index("by_issuerDid", ["issuerDid"])
     .index("by_issuerUserId", ["issuerUserId"])
+    .index("by_status", ["status"])
+    .index("by_blockchainStatus", ["blockchainAnchorStatus"]),
+
+  blockchainAnchors: defineTable({
+    credentialDocId: v.id("credentials"),
+    credentialId: v.string(),
+    credentialHash: v.string(), // 32-byte hex string (0x...)
+    network: v.string(), // "sepolia"
+    chainId: v.number(), // 11155111
+    contractAddress: v.string(),
+    transactionHash: v.optional(v.string()),
+    blockNumber: v.optional(v.number()),
+    anchoredAt: v.optional(v.number()),
+    anchoredByUserId: v.id("users"),
+    anchoredByClerkId: v.string(),
+    status: AnchorStatus,
+    failureReason: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_credentialDocId", ["credentialDocId"])
+    .index("by_credentialId", ["credentialId"])
+    .index("by_credentialHash", ["credentialHash"])
     .index("by_status", ["status"]),
+
+  verifications: defineTable({
+    verifierUserId: v.id("users"),
+    verifierClerkId: v.string(),
+    verifierRole: UserRole,
+    credentialId: v.string(),
+    credentialDocId: v.optional(v.id("credentials")),
+    credentialType: v.array(v.string()),
+    issuerDid: v.string(),
+    issuerName: v.string(),
+    recipientDid: v.string(),
+    result: VerificationResult,
+    signatureValid: v.boolean(),
+    integrityValid: v.boolean(),
+    statusValid: v.boolean(),
+    expirationValid: v.boolean(),
+    failureReason: v.optional(v.string()),
+    claimsSummary: v.optional(v.any()),
+    // Blockchain Verification Results
+    blockchainAnchored: v.optional(v.boolean()),
+    blockchainCredentialHash: v.optional(v.string()),
+    blockchainContractAddress: v.optional(v.string()),
+    blockchainTxHash: v.optional(v.string()),
+    blockchainBlockNumber: v.optional(v.number()),
+    blockchainNetwork: v.optional(v.string()),
+    blockchainAnchoredAt: v.optional(v.number()),
+    verifiedAt: v.number(),
+  })
+    .index("by_verifierUserId", ["verifierUserId"])
+    .index("by_credentialId", ["credentialId"])
+    .index("by_recipientDid", ["recipientDid"])
+    .index("by_result", ["result"])
+    .index("by_verifiedAt", ["verifiedAt"]),
 });

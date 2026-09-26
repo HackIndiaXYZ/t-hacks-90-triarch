@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { UserButton } from "@clerk/nextjs";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NavbarAdminLink } from "./navbar-admin-link";
+import { NavbarVerifierLink } from "./navbar-verifier-link";
 import { AccountSwitcher } from "@/components/auth/account-switcher";
 import { APP_NAME } from "@/lib/constants";
 
@@ -70,6 +71,7 @@ export async function Navbar() {
             <div className="flex items-center gap-2 sm:gap-3">
               <AccountSwitcher />
               <NavbarAdminLink />
+              <NavbarVerifierLink />
               <Link
                 href="/dashboard"
                 className="text-xs font-semibold text-slate-700 hover:text-sky-600 dark:text-slate-300 dark:hover:text-cyan-400 px-2 sm:px-3 py-1.5 transition-colors"
