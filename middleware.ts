@@ -11,17 +11,13 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
-  try {
-    if (!isPublicRoute(request)) {
-      await auth.protect();
+  if (!isPublicRoute(request)) {
+    const { userId } = await auth();
+    if (!userId) {
+      const signInUrl = new URL("/sign-in", request.url);
+      signInUrl.searchParams.set("redirect_url", request.url);
+      return NextResponse.redirect(signInUrl);
     }
-  } catch (err: unknown) {
-    // Next.js redirect errors use internal digest symbols — rethrow for normal redirection
-    if (err && typeof err === "object" && "digest" in err) {
-      throw err;
-    }
-    console.error("[Middleware Error]:", err);
-    return NextResponse.next();
   }
 });
 
