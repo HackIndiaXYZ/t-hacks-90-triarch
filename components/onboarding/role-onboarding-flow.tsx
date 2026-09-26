@@ -29,18 +29,16 @@ export function RoleOnboardingFlow() {
   const submitRoleRequest = useMutation(api.roleRequests.submitRoleRequest);
   const syncCurrentUser = useMutation(api.users.syncCurrentUser);
 
-  // Auto-redirect initialized and privileged roles away from onboarding
+  // Auto-redirect privileged roles away from onboarding
   React.useEffect(() => {
     if (currentUser) {
       if (currentUser.role === "admin") {
         router.replace("/admin");
       } else if (currentUser.role === "issuer" || currentUser.role === "verifier") {
         router.replace("/dashboard");
-      } else if (currentUser.onboardingCompleted && latestRequest?.status !== "pending") {
-        router.replace("/dashboard");
       }
     }
-  }, [currentUser, latestRequest, router]);
+  }, [currentUser, router]);
 
   const [selectedRole, setSelectedRole] = useState<SelectedRole | null>(null);
   const [step, setStep] = useState<"select" | "form" | "submitted">("select");
