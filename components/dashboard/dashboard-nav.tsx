@@ -4,18 +4,14 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { useConvexAuth, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 export function DashboardNav() {
   const pathname = usePathname();
   const { user: clerkUser } = useUser();
   const { signOut } = useClerk();
-  const { isAuthenticated } = useConvexAuth();
-  const convexUser = useQuery(
-    api.users.getCurrentUser,
-    isAuthenticated ? {} : "skip"
-  );
+  const convexUser = useQuery(api.users.getCurrentUser);
 
   const role = convexUser?.role || "user";
 

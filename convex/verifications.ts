@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireUser, requireRole } from "./lib/auth";
+import { requireRole, getAuthenticatedUser } from "./lib/auth";
 import { verifyVcSignature } from "./lib/vcVerifier";
 
 /**
@@ -328,7 +328,11 @@ export const getAuditLogs = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx);
+    const auth = await getAuthenticatedUser(ctx);
+    if (!auth || !auth.user) {
+      return [];
+    }
+    const user = auth.user;
     const maxLimit = args.limit || 30;
 
     if (user.role === "admin") {

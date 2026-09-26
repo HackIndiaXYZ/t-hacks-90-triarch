@@ -13,7 +13,7 @@ export const getViewer = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Unauthenticated: No valid Clerk session recognized by Convex");
+      return null;
     }
 
     return {

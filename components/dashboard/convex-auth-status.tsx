@@ -7,11 +7,8 @@ import { api } from "@/convex/_generated/api";
 export function ConvexAuthStatus() {
   const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
 
-  // Call the minimal authenticated Convex query when authenticated
-  const viewer = useQuery(
-    api.auth.getViewer,
-    isAuthenticated ? {} : "skip"
-  );
+  // Call the authenticated Convex query directly (returns null if unauthenticated)
+  const viewer = useQuery(api.auth.getViewer);
 
   return (
     <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200/90 dark:border-slate-800 backdrop-blur-md relative overflow-hidden group hover:border-sky-500/40 dark:hover:border-cyan-500/40 transition-all shadow-sm dark:shadow-xl dark:shadow-cyan-950/20">

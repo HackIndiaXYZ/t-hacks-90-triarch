@@ -1,15 +1,11 @@
 "use client";
 
 import React from "react";
-import { useConvexAuth, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 export function ActivitySection() {
-  const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
-  const auditLogs = useQuery(
-    api.verifications.getAuditLogs,
-    isAuthenticated ? { limit: 20 } : "skip"
-  );
+  const auditLogs = useQuery(api.verifications.getAuditLogs, { limit: 20 });
   const eventCount = auditLogs ? auditLogs.length : 0;
 
   return (
@@ -42,7 +38,7 @@ export function ActivitySection() {
         </span>
       </div>
 
-      {isAuthLoading || auditLogs === undefined ? (
+      {auditLogs === undefined ? (
         <div className="py-8 text-center text-xs font-mono text-slate-500">
           Loading audit events...
         </div>

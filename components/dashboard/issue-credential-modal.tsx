@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -90,13 +90,9 @@ export function IssueCredentialModal({
   onSuccess,
 }: IssueCredentialModalProps) {
   const { user: clerkUser } = useUser();
-  const { isAuthenticated } = useConvexAuth();
-  const issuerUser = useQuery(
-    api.users.getCurrentUser,
-    isAuthenticated ? {} : "skip"
-  );
+  const issuerUser = useQuery(api.users.getCurrentUser);
   const isIssuerOrAdmin =
-    isAuthenticated && (issuerUser?.role === "issuer" || issuerUser?.role === "admin");
+    issuerUser?.role === "issuer" || issuerUser?.role === "admin";
 
   const registeredRecipients = useQuery(
     api.credentials.getRegisteredRecipients,

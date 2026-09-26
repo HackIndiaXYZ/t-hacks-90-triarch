@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { provisionUserDid } from "@/lib/crypto/did-service";
@@ -9,12 +9,8 @@ import { hasLocalKey } from "@/lib/crypto/keystore";
 import { Button } from "@/components/ui/button";
 
 export function IdentityCard() {
-  const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
   const { user: clerkUser } = useUser();
-  const user = useQuery(
-    api.users.getCurrentUser,
-    isAuthenticated ? {} : "skip"
-  );
+  const user = useQuery(api.users.getCurrentUser);
   const registerUserDid = useMutation(api.users.registerUserDid);
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -123,12 +119,7 @@ export function IdentityCard() {
 
         {/* Status Indicator Badge */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          {isAuthLoading ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-500">
-              <span className="w-2 h-2 rounded-full bg-slate-400 animate-spin" />
-              Loading...
-            </span>
-          ) : isGenerating ? (
+          {isGenerating ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 animate-pulse">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
               Status: Creating...
@@ -137,6 +128,11 @@ export function IdentityCard() {
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 shadow-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               Status: Created
+            </span>
+          ) : user === undefined ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-500">
+              <span className="w-2 h-2 rounded-full bg-slate-400 animate-spin" />
+              Loading...
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
@@ -279,7 +275,7 @@ export function IdentityCard() {
 
               <Button
                 onClick={handleGenerateDid}
-                disabled={isGenerating || isAuthLoading}
+                disabled={isGenerating}
                 className="shrink-0 font-semibold"
               >
                 Generate DID &rarr;
@@ -291,7 +287,7 @@ export function IdentityCard() {
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800/80">
                 <span className="text-slate-500 text-[11px] block mb-1">Subject Identity:</span>
                 <span className="text-slate-800 dark:text-slate-200 break-all font-sans font-medium">
-                  {isAuthLoading ? "Loading..." : subjectDisplay}
+                  {subjectDisplay}
                 </span>
               </div>
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800/80">

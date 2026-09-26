@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireUser, requireRole } from "./lib/auth";
+import { requireUser, requireRole, getAuthenticatedUser } from "./lib/auth";
 
 /**
  * issueVerifiableCredential
@@ -116,7 +116,12 @@ export const issueVerifiableCredential = mutation({
 export const getMyReceivedCredentials = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx);
+    const auth = await getAuthenticatedUser(ctx);
+    if (!auth || !auth.user) {
+      return [];
+    }
+
+    const user = auth.user;
 
     if (!user.did) {
       return [];
@@ -151,7 +156,14 @@ export const getMyReceivedCredentials = query({
 export const getMyIssuedCredentials = query({
   args: {},
   handler: async (ctx) => {
-    const issuer = await requireRole(ctx, ["issuer", "admin"]);
+    const auth = await getAuthenticatedUser(ctx);
+    if (!auth || !auth.user) {
+      return [];
+    }
+    const issuer = auth.user;
+    if (issuer.role !== "issuer" && issuer.role !== "admin") {
+      return [];
+    }
 
     const issued = await ctx.db
       .query("credentials")

@@ -261,7 +261,11 @@ export const updatePasskeyUsage = mutation({
 export const getUserPasskeys = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx);
+    const auth = await getAuthenticatedUser(ctx);
+    if (!auth || !auth.user) {
+      return [];
+    }
+    const user = auth.user;
 
     const passkeys = await ctx.db
       .query("passkeys")

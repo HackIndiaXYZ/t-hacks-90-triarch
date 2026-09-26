@@ -1,17 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { useConvexAuth, useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { startRegistration, startAuthentication } from "@simplewebauthn/browser";
 
 export function PasskeysCard() {
-  const { isAuthenticated } = useConvexAuth();
-  const passkeys = useQuery(
-    api.passkeys.getUserPasskeys,
-    isAuthenticated ? {} : "skip"
-  );
+  const passkeys = useQuery(api.passkeys.getUserPasskeys);
   const deletePasskeyMutation = useMutation(api.passkeys.deletePasskey);
 
   const [isRegistering, setIsRegistering] = useState(false);

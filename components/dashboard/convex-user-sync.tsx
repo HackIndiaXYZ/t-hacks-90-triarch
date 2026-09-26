@@ -6,15 +6,12 @@ import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 
 export function ConvexUserSync() {
-  const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
+  const { isAuthenticated } = useConvexAuth();
   const { user: clerkUser, isLoaded: isClerkLoaded } = useUser();
   const syncCurrentUser = useMutation(api.users.syncCurrentUser);
-  const userRecord = useQuery(
-    api.users.getCurrentUser,
-    isAuthenticated ? {} : "skip"
-  );
+  const userRecord = useQuery(api.users.getCurrentUser);
 
-  const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
+  const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const lastSyncedKeyRef = useRef<string>("");
 
@@ -29,7 +26,7 @@ export function ConvexUserSync() {
 
       if (lastSyncedKeyRef.current !== syncKey) {
         lastSyncedKeyRef.current = syncKey;
-        setSyncStatus("syncing");
+        setIsSyncing(true);
 
         syncCurrentUser({
           username: username || undefined,
@@ -38,11 +35,11 @@ export function ConvexUserSync() {
           imageUrl: imageUrl || undefined,
         })
           .then(() => {
-            setSyncStatus("synced");
+            setIsSyncing(false);
           })
           .catch((err) => {
             console.error("Failed to sync user to Convex:", err);
-            setSyncStatus("error");
+            setIsSyncing(false);
             setSyncError(err instanceof Error ? err.message : "Sync failed");
           });
       }
@@ -54,12 +51,20 @@ export function ConvexUserSync() {
         dateStyle: "medium",
         timeStyle: "short",
       })
+    : clerkUser?.createdAt
+    ? new Date(clerkUser.createdAt).toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
     : null;
 
   const displayUsername = userRecord?.username || clerkUser?.username || "Not configured";
   const displayEmail = userRecord?.email || clerkUser?.primaryEmailAddress?.emailAddress || clerkUser?.emailAddresses?.[0]?.emailAddress || "Not available";
   const displayName = userRecord?.name || clerkUser?.fullName || [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(" ") || displayUsername;
   const displayImage = userRecord?.imageUrl || clerkUser?.imageUrl;
+  const displayRole = userRecord?.role || "user";
+
+  const showSyncing = isSyncing && !userRecord;
 
   return (
     <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200/90 dark:border-slate-800 backdrop-blur-md relative overflow-hidden group hover:border-emerald-500/40 transition-all shadow-sm dark:shadow-xl dark:shadow-cyan-950/20">
@@ -88,7 +93,7 @@ export function ConvexUserSync() {
 
         {/* Sync Status Badge */}
         <div>
-          {isAuthLoading || syncStatus === "syncing" ? (
+          {showSyncing ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-ping" />
               Syncing User...
@@ -96,23 +101,24 @@ export function ConvexUserSync() {
           ) : userRecord ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-              Convex Synced ({userRecord.role})
+              Convex Synced ({displayRole})
             </span>
-          ) : syncStatus === "error" ? (
+          ) : syncError ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400" />
               Sync Error
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-              Pending
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Active Session
             </span>
           )}
         </div>
       </div>
 
       {/* Content Body */}
-      {isAuthLoading ? (
+      {userRecord === undefined && !clerkUser && !syncError ? (
         <div className="py-6 flex flex-col items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
           <span>Authenticating and reading user record...</span>
@@ -122,22 +128,26 @@ export function ConvexUserSync() {
           <p className="font-semibold mb-1">Sync failed:</p>
           <p className="font-mono">{syncError}</p>
         </div>
-      ) : userRecord ? (
+      ) : userRecord || clerkUser ? (
         <div className="space-y-3 mt-4 text-xs font-mono">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
               <span className="text-slate-500 text-[11px] block mb-1">Convex Record ID (_id):</span>
-              <span className="text-emerald-700 dark:text-emerald-300 break-all">{userRecord._id}</span>
+              <span className="text-emerald-700 dark:text-emerald-300 break-all">
+                {userRecord?._id || "Syncing with Convex..."}
+              </span>
             </div>
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
               <span className="text-slate-500 text-[11px] block mb-1">Indexed clerkId:</span>
-              <span className="text-sky-700 dark:text-cyan-300 break-all">{userRecord.clerkId}</span>
+              <span className="text-sky-700 dark:text-cyan-300 break-all">
+                {userRecord?.clerkId || clerkUser?.id || "N/A"}
+              </span>
             </div>
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
               <span className="text-slate-500 text-[11px] block mb-1">Convex Stored Role:</span>
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-sky-50 dark:bg-cyan-500/10 text-sky-700 dark:text-cyan-400 border border-sky-200 dark:border-cyan-500/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-sky-500 dark:bg-cyan-400" />
-                {userRecord.role}
+                {displayRole}
               </span>
             </div>
           </div>
@@ -176,26 +186,26 @@ export function ConvexUserSync() {
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80">
               <span className="text-slate-500 text-[11px] block mb-1">Onboarding Status:</span>
               <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold ${
-                userRecord.role === "admin"
+                userRecord?.role === "admin"
                   ? "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20"
-                  : userRecord.role === "issuer" || userRecord.role === "verifier" || userRecord.onboardingCompleted
+                  : userRecord?.role === "issuer" || userRecord?.role === "verifier" || userRecord?.onboardingCompleted
                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20"
                   : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20"
               }`}>
-                {userRecord.role === "admin"
+                {userRecord?.role === "admin"
                   ? "Fully Initialized (Admin)"
-                  : userRecord.role === "issuer"
+                  : userRecord?.role === "issuer"
                   ? "Authorized (Issuer)"
-                  : userRecord.role === "verifier"
+                  : userRecord?.role === "verifier"
                   ? "Authorized (Verifier)"
-                  : userRecord.onboardingCompleted
+                  : userRecord?.onboardingCompleted
                   ? "Completed"
                   : "Action Recommended"}
               </span>
             </div>
           </div>
 
-          {userRecord.role === "user" && !userRecord.onboardingCompleted && (
+          {userRecord?.role === "user" && !userRecord?.onboardingCompleted && (
             <div className="p-3 rounded-xl bg-sky-50/80 dark:bg-slate-950/90 border border-sky-200 dark:border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div>
                 <span className="font-semibold text-slate-900 dark:text-slate-100 block">

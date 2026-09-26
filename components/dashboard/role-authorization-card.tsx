@@ -2,19 +2,12 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 export function RoleAuthorizationCard() {
-  const { isAuthenticated } = useConvexAuth();
-  const currentUser = useQuery(
-    api.users.getCurrentUser,
-    isAuthenticated ? {} : "skip"
-  );
-  const latestRequest = useQuery(
-    api.roleRequests.getLatestRoleRequest,
-    isAuthenticated ? {} : "skip"
-  );
+  const currentUser = useQuery(api.users.getCurrentUser);
+  const latestRequest = useQuery(api.roleRequests.getLatestRoleRequest);
   const changeUserRole = useMutation(api.users.changeUserRole);
 
   const [testResult, setTestResult] = useState<{

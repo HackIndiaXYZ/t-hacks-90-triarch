@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useConvexAuth, useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { IssueCredentialModal } from "./issue-credential-modal";
@@ -9,22 +9,12 @@ import { CredentialViewerModal } from "./credential-viewer-modal";
 import { QrShareModal } from "./qr-share-modal";
 
 export function CredentialsSection() {
-  const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
-  const currentUser = useQuery(
-    api.users.getCurrentUser,
-    isAuthenticated ? {} : "skip"
-  );
-
-  const receivedCredentials = useQuery(
-    api.credentials.getMyReceivedCredentials,
-    isAuthenticated ? {} : "skip"
-  );
-
+  const currentUser = useQuery(api.users.getCurrentUser);
+  const receivedCredentials = useQuery(api.credentials.getMyReceivedCredentials);
   const isIssuer = currentUser?.role === "issuer" || currentUser?.role === "admin";
-
   const issuedCredentials = useQuery(
     api.credentials.getMyIssuedCredentials,
-    isAuthenticated && isIssuer ? {} : "skip"
+    isIssuer ? {} : "skip"
   );
 
   const revokeMutation = useMutation(api.credentials.revokeCredential);
@@ -272,7 +262,7 @@ export function CredentialsSection() {
       </div>
 
       {/* Content Area */}
-      {isAuthLoading || displayedList === undefined ? (
+      {displayedList === undefined ? (
         <div className="py-12 text-center text-xs font-mono text-slate-500">
           Loading cryptographic credentials...
         </div>
